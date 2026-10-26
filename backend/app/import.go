@@ -8,8 +8,8 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/kalfasyan/splitwiz/ledger"
-	"github.com/kalfasyan/splitwiz/splitwise"
+	"github.com/selfhostit/splitwiz/ledger"
+	"github.com/selfhostit/splitwiz/splitwise"
 )
 
 var nonEmptyRef = dbx.NewExp("import_ref != ''")

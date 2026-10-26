@@ -64,7 +64,7 @@ func pushContact() string {
 	if c := os.Getenv("SPLITWIZ_PUSH_CONTACT"); c != "" {
 		return c
 	}
-	return "https://github.com/kalfasyan/splitwiz"
+	return "https://github.com/selfhostit/splitwiz"
 }
 
 // notification is what the service worker (web/public/sw.js) shows.

@@ -8,7 +8,7 @@ import (
 	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/kalfasyan/splitwiz/ledger"
+	"github.com/selfhostit/splitwiz/ledger"
 )
 
 // Register binds the Splitwiz hooks and routes to a PocketBase app.

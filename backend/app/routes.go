@@ -10,7 +10,7 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/kalfasyan/splitwiz/ledger"
+	"github.com/selfhostit/splitwiz/ledger"
 )
 
 type userInfo struct {

@@ -10,9 +10,9 @@
 
 A small, self-hosted alternative to Splitwise for two people. No ads, no daily limits, no account on someone else's cloud. One Docker container, installable on your phone like a native app.
 
-[![CI](https://github.com/kalfasyan/splitwiz/actions/workflows/ci.yml/badge.svg)](https://github.com/kalfasyan/splitwiz/actions/workflows/ci.yml)
+[![CI](https://github.com/selfhostit/splitwiz/actions/workflows/ci.yml/badge.svg)](https://github.com/selfhostit/splitwiz/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Docker image](https://img.shields.io/badge/docker-ghcr.io%2Fkalfasyan%2Fsplitwiz-blue?logo=docker&logoColor=white)](https://github.com/kalfasyan/splitwiz/pkgs/container/splitwiz)
+[![Docker image](https://img.shields.io/badge/docker-ghcr.io%2Fselfhostit%2Fsplitwiz-blue?logo=docker&logoColor=white)](https://github.com/selfhostit/splitwiz/pkgs/container/splitwiz)
 [![Buy me a coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/kalfasyan)
 
 <img src="docs/screenshots/hero.png" alt="Splitwiz on a phone: balance, adding an expense, stats, expense detail with a category chart, and settings in dark mode" width="100%">
@@ -65,7 +65,7 @@ Otherwise you need Docker. Pick whichever fits your machine; both end at the sam
 **With a terminal** (Linux server, VPS, Raspberry Pi, or a NAS with SSH):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/kalfasyan/splitwiz/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/selfhostit/splitwiz/main/scripts/install.sh | sh
 ```
 
 It asks for an install folder, your time zone and who may connect (Enter keeps each default), then starts Splitwiz and prints the address to open.
@@ -74,7 +74,7 @@ It asks for an install folder, your time zone and who may connect (Enter keeps e
 
 ```sh
 mkdir splitwiz && cd splitwiz
-curl -O https://raw.githubusercontent.com/kalfasyan/splitwiz/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/selfhostit/splitwiz/main/docker-compose.yml
 docker compose up -d
 ```
 
@@ -88,7 +88,7 @@ The setup screen is open to whoever reaches it first, so finish it before you ma
 ```sh
 docker run -d --name splitwiz --restart always \
   -p 127.0.0.1:8090:8090 -v "$PWD/pb_data:/app/pb_data" -e TZ=Europe/Brussels \
-  ghcr.io/kalfasyan/splitwiz:latest
+  ghcr.io/selfhostit/splitwiz:latest
 ```
 
 </details>
@@ -164,7 +164,7 @@ Every push to `main` publishes a new `latest` image. Your data and settings stay
 | Money logic | `backend/ledger`: integer cents, split, balance and repeat-date rules, unit tested |
 | Splitwise import | `backend/splitwise`: parses the export and keeps each row's exact split |
 | Web app | Svelte 5, Vite and Tailwind (`web/`), installable PWA |
-| Packaging | One Docker image (`Dockerfile`) for x86-64 and ARM, published to `ghcr.io/kalfasyan/splitwiz` by GitHub Actions |
+| Packaging | One Docker image (`Dockerfile`) for x86-64 and ARM, published to `ghcr.io/selfhostit/splitwiz` by GitHub Actions |
 
 The server computes what each person owes for every expense itself, so a phone can never store an inconsistent split.
 

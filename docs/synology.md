@@ -2,7 +2,7 @@
 
 This guide uses only the DSM 7 web interface and gives you Splitwiz at `https://<your-name>.synology.me`, with a free Let's Encrypt certificate. It was written on a DS220+; any Synology model that runs Container Manager (x86-64 or ARM) works the same way.
 
-Comfortable with SSH? `curl -fsSL https://raw.githubusercontent.com/kalfasyan/splitwiz/main/scripts/install.sh | sh` on the NAS does steps 1 to 3 for you (it installs into `/volume1/docker/splitwiz`).
+Comfortable with SSH? `curl -fsSL https://raw.githubusercontent.com/selfhostit/splitwiz/main/scripts/install.sh | sh` on the NAS does steps 1 to 3 for you (it installs into `/volume1/docker/splitwiz`).
 
 Replace `<your-name>` with whatever hostname you pick in step 4.
 
@@ -59,7 +59,7 @@ Open `https://<your-name>.synology.me` on each phone, sign in, and choose **⋮ 
 
 ## Updating
 
-In Container Manager, open Image, select `ghcr.io/kalfasyan/splitwiz` and choose **Update** when DSM offers it. Then Project > splitwiz > Action > **Build** to recreate the container. Your data stays in `pb_data` and migrations run on start.
+In Container Manager, open Image, select `ghcr.io/selfhostit/splitwiz` and choose **Update** when DSM offers it. Then Project > splitwiz > Action > **Build** to recreate the container. Your data stays in `pb_data` and migrations run on start.
 
 Working on Splitwiz yourself? `scripts/deploy-to-nas.sh you@your-nas-address` builds the image on your computer, copies it to the NAS over SSH and recreates the container.
 

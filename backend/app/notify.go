@@ -9,7 +9,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/types"
 
-	"github.com/kalfasyan/splitwiz/ledger"
+	"github.com/selfhostit/splitwiz/ledger"
 )
 
 // What the other person hears about: expenses they didn't add, comments,

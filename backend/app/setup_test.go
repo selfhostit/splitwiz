@@ -5,7 +5,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	_ "github.com/kalfasyan/splitwiz/migrations"
+	_ "github.com/selfhostit/splitwiz/migrations"
 )
 
 func newTestApp(t *testing.T) core.App {

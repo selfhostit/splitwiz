@@ -12,7 +12,7 @@
 set -e
 TARGET=${1:?usage: $0 user@nas-address}
 DIR=${SPLITWIZ_DIR:-/volume1/docker/splitwiz}
-IMAGE=ghcr.io/kalfasyan/splitwiz:latest
+IMAGE=ghcr.io/selfhostit/splitwiz:latest
 
 tz=${TZ:-$(cat /etc/timezone 2>/dev/null || timedatectl show -p Timezone --value 2>/dev/null || readlink /etc/localtime | sed 's|.*zoneinfo/||')}
 

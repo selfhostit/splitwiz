@@ -1,4 +1,4 @@
-module github.com/kalfasyan/splitwiz
+module github.com/selfhostit/splitwiz
 
 go 1.27
 

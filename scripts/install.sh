@@ -3,7 +3,7 @@
 # VPS, Raspberry Pi, or a NAS with SSH and Docker (Synology, QNAP, Unraid,
 # TrueNAS SCALE, OpenMediaVault, ...).
 #
-#   curl -fsSL https://raw.githubusercontent.com/kalfasyan/splitwiz/main/scripts/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/selfhostit/splitwiz/main/scripts/install.sh | sh
 #
 # It asks a few questions (Enter keeps the default), writes docker-compose.yml
 # and .env into the install folder, and starts Splitwiz. Run it again to
@@ -13,8 +13,8 @@
 # variables if set: SPLITWIZ_DIR, TZ, SPLITWIZ_LISTEN, SPLITWIZ_PORT.
 set -e
 
-REPO_RAW=https://raw.githubusercontent.com/kalfasyan/splitwiz/main
-IMAGE=ghcr.io/kalfasyan/splitwiz
+REPO_RAW=https://raw.githubusercontent.com/selfhostit/splitwiz/main
+IMAGE=ghcr.io/selfhostit/splitwiz
 
 # set when run as scripts/install.sh from a clone rather than through a pipe
 case $0 in
@@ -112,7 +112,7 @@ else
 	SPLITWIZ_PORT=$(ask "Port" "${SPLITWIZ_PORT:-8090}")
 
 	cat > .env <<-EOF
-		# Splitwiz settings; see https://github.com/kalfasyan/splitwiz/blob/main/.env.example
+		# Splitwiz settings; see https://github.com/selfhostit/splitwiz/blob/main/.env.example
 		TZ=$TZ
 		SPLITWIZ_LISTEN=$SPLITWIZ_LISTEN
 		SPLITWIZ_PORT=$SPLITWIZ_PORT
@@ -179,5 +179,5 @@ else
 fi
 say ""
 say "Phones need an HTTPS address to install the app and get notifications:"
-say "https://github.com/kalfasyan/splitwiz#using-it-from-your-phones"
+say "https://github.com/selfhostit/splitwiz#using-it-from-your-phones"
 say "To update later, run this installer again."

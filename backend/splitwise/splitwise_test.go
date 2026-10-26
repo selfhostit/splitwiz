@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kalfasyan/splitwiz/ledger"
+	"github.com/selfhostit/splitwiz/ledger"
 )
 
 const sample = "\ufeffDate,Description,Category,Cost,Currency,Ann,Bob\n" +

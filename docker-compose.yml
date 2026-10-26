@@ -9,7 +9,7 @@
 # QNAP Container Station, Portainer, ...). See docs/synology.md.
 services:
   splitwiz:
-    image: ghcr.io/kalfasyan/splitwiz:${SPLITWIZ_VERSION:-latest}
+    image: ghcr.io/selfhostit/splitwiz:${SPLITWIZ_VERSION:-latest}
     container_name: splitwiz
     restart: always
     ports:

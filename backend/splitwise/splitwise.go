@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kalfasyan/splitwiz/ledger"
+	"github.com/selfhostit/splitwiz/ledger"
 )
 
 var (

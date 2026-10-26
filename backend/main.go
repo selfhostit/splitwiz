@@ -10,8 +10,8 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 
-	"github.com/kalfasyan/splitwiz/app"
-	_ "github.com/kalfasyan/splitwiz/migrations"
+	"github.com/selfhostit/splitwiz/app"
+	_ "github.com/selfhostit/splitwiz/migrations"
 )
 
 func main() {

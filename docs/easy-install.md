@@ -39,13 +39,13 @@ Copy the line for your computer, change `Europe/Brussels` to your own time zone 
 **Windows:**
 
 ```
-docker run -d --name splitwiz --restart always -p 127.0.0.1:8090:8090 -v "$HOME\Splitwiz:/app/pb_data" -e TZ=Europe/Brussels ghcr.io/kalfasyan/splitwiz:latest
+docker run -d --name splitwiz --restart always -p 127.0.0.1:8090:8090 -v "$HOME\Splitwiz:/app/pb_data" -e TZ=Europe/Brussels ghcr.io/selfhostit/splitwiz:latest
 ```
 
 **Mac:**
 
 ```
-docker run -d --name splitwiz --restart always -p 127.0.0.1:8090:8090 -v "$HOME/Splitwiz:/app/pb_data" -e TZ=Europe/Brussels ghcr.io/kalfasyan/splitwiz:latest
+docker run -d --name splitwiz --restart always -p 127.0.0.1:8090:8090 -v "$HOME/Splitwiz:/app/pb_data" -e TZ=Europe/Brussels ghcr.io/selfhostit/splitwiz:latest
 ```
 
 It downloads Splitwiz and starts it; when it prints a long line of letters and numbers, it's running. Your data is kept in a new `Splitwiz` folder inside your user folder (the one with your name). Don't delete it.
@@ -71,7 +71,7 @@ It takes a few minutes. Docker starts by itself whenever the computer turns on, 
 In the same terminal, paste this line and press Enter:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/kalfasyan/splitwiz/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/selfhostit/splitwiz/main/scripts/install.sh | sh
 ```
 
 It asks four questions. Press Enter for each one to keep the suggested answer: it keeps your data in a `splitwiz` folder in your home folder, uses this computer's time zone, lets only this computer connect (Tailscale in step 5 takes care of your phones), and uses port 8090.
@@ -146,7 +146,7 @@ That's it. Enjoy not arguing about money.
 **Windows or Mac:** open a command window (step 2), paste this line and press Enter. It downloads the newest Splitwiz and removes the old one:
 
 ```
-docker pull ghcr.io/kalfasyan/splitwiz:latest; docker rm -f splitwiz
+docker pull ghcr.io/selfhostit/splitwiz:latest; docker rm -f splitwiz
 ```
 
 Then paste your line from step 3 again. Your data is in the `Splitwiz` folder, so nothing is lost.
@@ -161,4 +161,4 @@ Then paste your line from step 3 again. Your data is in the `Splitwiz` folder, s
 
 - **The page doesn't load**: wait a minute and try again. Check that the computer is on. On Windows or Mac, check that Docker Desktop shows `splitwiz` as running (a green dot).
 - **There is no "Add to Home Screen" or "Install app"**: make sure the address starts with `https://`.
-- **Stuck?** [Open an issue](https://github.com/kalfasyan/splitwiz/issues) and describe what you see; a screenshot helps.
+- **Stuck?** [Open an issue](https://github.com/selfhostit/splitwiz/issues) and describe what you see; a screenshot helps.
