@@ -73,7 +73,7 @@ export function monthOutlook(expenses: Expense[], series: Recurring[], today: st
 
   const scheduledOn = new Array<number>(days + 1).fill(0);
   for (const o of upcoming(series, today, `${month}-${String(days).padStart(2, '0')}`)) {
-    scheduledOn[Number(o.day.slice(8, 10))] += o.series.amount_cents;
+    scheduledOn[Number(o.day.slice(8, 10))] += o.amount_cents;
   }
 
   // starts with a charge due today that the server hasn't added yet

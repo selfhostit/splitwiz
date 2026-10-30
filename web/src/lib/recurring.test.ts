@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Expense, Recurring } from './pb';
-import { nextDate, suggestMonthly, upcoming } from './recurring';
+import { amountOn, countUntil, hasEnded, nextDate, nthPayment, payments, suggestMonthly, upcoming, type Plan } from './recurring';
 
 const ex = (date: string, description: string, amount_cents = 9839, extra: Partial<Expense> = {}): Expense =>
   ({
@@ -73,5 +73,62 @@ describe('upcoming', () => {
   it('keeps monthly series on their anchor day after a short month', () => {
     const list = upcoming([s('x', '2027-02-28', 'month', { anchor_day: 31 })], '2027-02-01', '2027-04-30');
     expect(list.map((o) => o.day)).toEqual(['2027-02-28', '2027-03-31', '2027-04-30']);
+  });
+});
+
+describe('amount changes and end dates', () => {
+  const changes = [
+    { from: '2027-03-01', amount_cents: 9500 },
+    { from: '2027-01-01', amount_cents: 8500 },
+  ];
+
+  it('picks the latest change that has started', () => {
+    expect(amountOn(8000, changes, '2026-12-15')).toBe(8000);
+    expect(amountOn(8000, changes, '2027-01-01')).toBe(8500);
+    expect(amountOn(8000, changes, '2027-02-15')).toBe(8500);
+    expect(amountOn(8000, changes, '2030-01-01')).toBe(9500);
+    expect(amountOn(8000, null, '2030-01-01')).toBe(8000);
+  });
+
+  it('lists payments by phase until the end', () => {
+    const plan: Plan = { start: '2026-11-15', every: 'month', amount: 8000, changes, ends: '2027-04-30' };
+    expect(payments(plan, 100).map((p) => `${p.day} ${p.amount_cents} ${p.phase}`)).toEqual([
+      '2026-11-15 8000 0',
+      '2026-12-15 8000 0',
+      '2027-01-15 8500 1',
+      '2027-02-15 8500 1',
+      '2027-03-15 9500 2',
+      '2027-04-15 9500 2',
+    ]);
+    expect(countUntil(plan, '2027-01-15')).toBe(3);
+    expect(nthPayment(plan, 3)).toBe('2027-01-15');
+    // stays on the 30th after February, like the server
+    expect(nthPayment({ ...plan, start: '2026-10-30' }, 6)).toBe('2027-03-30');
+  });
+
+  it('shows changed amounts and stops after the end in upcoming', () => {
+    const s = {
+      id: 'net',
+      amount_cents: 8000,
+      every: 'month',
+      next_date: '2026-11-15 12:00:00.000Z',
+      anchor_day: 15,
+      paused: false,
+      ends_on: '2027-02-15 12:00:00.000Z',
+      changes,
+    } as Recurring;
+    const list = upcoming([s], '2026-11-01', '2027-12-31');
+    expect(list.map((o) => `${o.day} ${o.amount_cents}${o.changed ? ' new' : ''}${o.last ? ' last' : ''}`)).toEqual([
+      '2026-11-15 8000',
+      '2026-12-15 8000',
+      '2027-01-15 8500 new',
+      '2027-02-15 8500 last',
+    ]);
+  });
+
+  it('knows when a series has ended', () => {
+    expect(hasEnded({ ends_on: '', next_date: '2030-01-01 12:00:00.000Z' })).toBe(false);
+    expect(hasEnded({ ends_on: '2027-02-15 12:00:00.000Z', next_date: '2027-02-15 12:00:00.000Z' })).toBe(false);
+    expect(hasEnded({ ends_on: '2027-02-15 12:00:00.000Z', next_date: '2027-03-15 12:00:00.000Z' })).toBe(true);
   });
 });

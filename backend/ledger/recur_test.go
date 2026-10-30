@@ -41,3 +41,34 @@ func TestNextDate(t *testing.T) {
 		t.Errorf("want ErrEvery, got %v", err)
 	}
 }
+
+func TestAmountOn(t *testing.T) {
+	changes := []AmountChange{{"2027-03-01", 9500}, {"2027-01-01", 8500}}
+	cases := map[string]int64{
+		"2026-12-15": 8000,
+		"2027-01-01": 8500,
+		"2027-02-15": 8500,
+		"2027-03-15": 9500,
+		"2030-01-01": 9500,
+	}
+	for day, want := range cases {
+		if got := AmountOn(8000, changes, day); got != want {
+			t.Errorf("AmountOn(%s) = %d, want %d", day, got, want)
+		}
+	}
+	if got := AmountOn(8000, nil, "2027-01-01"); got != 8000 {
+		t.Errorf("no changes: got %d", got)
+	}
+}
+
+func TestScaleShare(t *testing.T) {
+	if got := ScaleShare(2000, 5000, 6000); got != 2400 {
+		t.Errorf("got %d, want 2400", got)
+	}
+	if got := ScaleShare(2000, 5000, 5000); got != 2000 {
+		t.Errorf("got %d, want 2000", got)
+	}
+	if got := ScaleShare(100, 0, 6000); got != 100 {
+		t.Errorf("got %d, want 100", got)
+	}
+}
