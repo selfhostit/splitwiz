@@ -72,7 +72,7 @@ export function enqueue(ops: Op[], op: Op): Op[] {
 const defaults: Record<Collection, Record<string, unknown>> = {
   expenses: { note: '', recurring: '', category: '', payer_percent: 0, other_share_cents: 0 },
   settlements: { note: '' },
-  recurring_expenses: { note: '', category: '', payer_percent: 0, other_share_cents: 0, paused: false, anchor_day: 0 },
+  recurring_expenses: { note: '', category: '', payer_percent: 0, other_share_cents: 0, paused: false, anchor_day: 0, ends_on: '', changes: [] },
   expense_comments: {},
   categories: { emoji: '', sort: 0, monthly_cents: 0 },
 };

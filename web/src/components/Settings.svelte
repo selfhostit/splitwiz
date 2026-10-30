@@ -5,13 +5,16 @@
   import { dayOf, pb, today, type Recurring } from '../lib/pb';
   import ImportSplitwise from './ImportSplitwise.svelte';
   import Categories from './Categories.svelte';
-  import { suggestMonthly, type Suggestion } from '../lib/recurring';
+  import { hasEnded, suggestMonthly, type Suggestion } from '../lib/recurring';
   import { startSeries } from '../lib/series';
   import { disablePush, enablePush, forgetPush, isBrave, pushEnabled, pushSupport, testPush } from '../lib/push';
 
   let { editRecurring }: { editRecurring: (r: Recurring) => void } = $props();
 
   const everyLabel = { week: 'Weekly', month: 'Monthly', year: 'Yearly' };
+  const monthYear = (d: string) => new Date(dayOf(d) + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+  // running series first, finished ones last
+  const seriesList = $derived([...app.recurring].sort((a, b) => Number(hasEnded(a)) - Number(hasEnded(b))));
   const shortDate = (d: string) =>
     new Date(dayOf(d) + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -155,17 +158,42 @@
       <p class="px-1 text-sm text-slate-500">None yet. When adding an expense, pick Weekly, Monthly or Yearly under Repeat.</p>
     {:else}
       <div class="divide-y divide-slate-100 rounded-2xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-        {#each app.recurring as r (r.id)}
+        {#each seriesList as r (r.id)}
+          {@const done = hasEnded(r)}
+          {@const changes = done ? [] : (r.changes ?? [])}
           <div class="flex items-center gap-3 px-4 py-3">
             <button class="min-w-0 flex-1 text-left" onclick={() => editRecurring(r)}>
-              <span class="block truncate font-medium {r.paused ? 'text-slate-400' : ''}">
+              <span class="block truncate font-medium {r.paused || done ? 'text-slate-400' : ''}">
                 {app.category(r.category)?.emoji ?? '🔁'} {r.description}
               </span>
               <span class="block truncate text-sm text-slate-500">
-                {formatCents(r.amount_cents)} · {everyLabel[r.every]} · {r.paused ? 'paused' : `next ${shortDate(r.next_date)}`}
+                {formatCents(r.amount_cents)} · {everyLabel[r.every]} · {done ? `ended ${monthYear(r.ends_on)}` : r.paused ? 'paused' : `next ${shortDate(r.next_date)}`}
               </span>
+              {#if changes.length || (r.ends_on && !done)}
+                <span class="mt-1 flex flex-wrap gap-1">
+                  {#each changes as c, i (c.from)}
+                    {@const up = c.amount_cents > (changes[i - 1]?.amount_cents ?? r.amount_cents)}
+                    <span
+                      class="rounded-full px-2 py-0.5 text-[11px] font-medium {up
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200'
+                        : 'bg-brand-50 text-brand-700 dark:bg-brand-700/20 dark:text-brand-100'}"
+                    >
+                      {up ? '▲' : '▼'} {formatCents(c.amount_cents)} from {monthYear(c.from)}
+                    </span>
+                  {/each}
+                  {#if r.ends_on && !done}
+                    <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      🏁 until {monthYear(r.ends_on)}
+                    </span>
+                  {/if}
+                </span>
+              {/if}
             </button>
-            <button class="chip" onclick={() => togglePause(r)}>{r.paused ? 'Resume' : 'Pause'}</button>
+            {#if done}
+              <span class="shrink-0 text-sm text-slate-400">Ended</span>
+            {:else}
+              <button class="chip" onclick={() => togglePause(r)}>{r.paused ? 'Resume' : 'Pause'}</button>
+            {/if}
           </div>
         {/each}
       </div>
