@@ -11,6 +11,7 @@
   import SettleForm from './components/SettleForm.svelte';
   import Sheet from './components/Sheet.svelte';
   import Toast from './components/Toast.svelte';
+  import { openKeyboard } from './lib/keyboard';
 
   type Tab = 'home' | 'history' | 'stats' | 'settings';
   let tab = $state<Tab>('home');
@@ -63,7 +64,10 @@
   });
 
   const actions = {
-    addExpense: () => (expenseSheet = { item: null }),
+    addExpense: () => {
+      openKeyboard();
+      expenseSheet = { item: null };
+    },
     editExpense: (item: Expense) => (expenseSheet = { item }),
     settle: () => (settleSheet = { item: null }),
     editSettlement: (item: Settlement) => (settleSheet = { item }),

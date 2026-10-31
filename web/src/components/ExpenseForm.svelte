@@ -302,14 +302,17 @@
     </div>
   {/if}
 
-  {#if error}<p class="text-sm text-red-600">{error}</p>{/if}
-
-  <button class="btn-primary" disabled={!valid || busy}>
-    {expense || template ? 'Save changes' : every ? 'Add repeating expense' : 'Add expense'}
-  </button>
   {#if expense || template}
     <button type="button" class="py-2 text-sm font-medium text-red-600" onclick={remove} disabled={busy}>
       {template ? 'Stop repeating' : 'Delete expense'}
     </button>
   {/if}
+
+  <!-- stays in view while the rest of the form scrolls -->
+  <div class="sticky -bottom-[calc(1.25rem+env(safe-area-inset-bottom))] -mx-5 -mb-[calc(1.25rem+env(safe-area-inset-bottom))] flex flex-col gap-2 border-t border-slate-200 bg-white px-5 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))] dark:border-slate-800 dark:bg-slate-900">
+    {#if error}<p class="text-sm text-red-600">{error}</p>{/if}
+    <button class="btn-primary" disabled={!valid || busy}>
+      {expense || template ? 'Save changes' : every ? 'Add repeating expense' : 'Add expense'}
+    </button>
+  </div>
 </form>
