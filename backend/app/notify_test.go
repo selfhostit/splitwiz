@@ -42,7 +42,10 @@ func TestCategoryBudgetAlert(t *testing.T) {
 		}
 	}
 	add(5000, now)
-	add(9000, now.AddDate(0, -1, 0)) // last month doesn't count
+	// last month doesn't count. Step back from the 1st: on the 31st,
+	// AddDate(0, -1, 0) lands on the 1st of this month.
+	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 12, 0, 0, 0, now.Location())
+	add(9000, firstOfMonth.AddDate(0, 0, -1))
 
 	if spent, err := categorySpent(app, groceries.Id, now); err != nil || spent != 5000 {
 		t.Fatalf("spent this month = %d, %v; want 5000", spent, err)
