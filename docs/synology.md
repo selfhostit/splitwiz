@@ -61,6 +61,22 @@ Open `https://<your-name>.synology.me` on each phone, sign in, and choose **⋮ 
 
 In Container Manager, open Image, select `ghcr.io/selfhostit/splitwiz` and choose **Update** when DSM offers it. Then Project > splitwiz > Action > **Build** to recreate the container. Your data stays in `pb_data` and migrations run on start.
 
+### One command over SSH
+
+If you use SSH, `selfhostit update splitwiz` does the same in one step: it pulls the newest image, recreates the container only if something changed, and tells you which image it runs and whether the container was recreated. It works for any app kept as `/volume1/docker/<app>/docker-compose.yml`, so `selfhostit update flowy`, `selfhostit update splitwiz flowy` and `selfhostit update all` work too. `selfhostit list` shows the apps it finds.
+
+To install it, turn on Control Panel > User & Group > Advanced > **Enable user home service** (so your home folder lives on the volume and survives DSM updates), SSH into the NAS and run:
+
+```sh
+mkdir -p ~/bin
+curl -fsSL https://raw.githubusercontent.com/selfhostit/splitwiz/main/scripts/selfhostit -o ~/bin/selfhostit
+chmod +x ~/bin/selfhostit
+echo 'export PATH="$HOME/bin:$PATH"' >> ~/.profile
+. ~/.profile
+```
+
+It asks for your password once, for `sudo`. Keep your apps somewhere else? Add `export SELFHOSTIT_DIR=/volume1/other-folder` to `~/.profile`. Run the `curl` line again to get a newer version of the command.
+
 Working on Splitwiz yourself? `scripts/deploy-to-nas.sh you@your-nas-address` builds the image on your computer, copies it to the NAS over SSH and recreates the container.
 
 ## Backups
