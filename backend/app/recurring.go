@@ -1,6 +1,7 @@
 package app
 
 import (
+	"sort"
 	"time"
 
 	validation "github.com/pocketbase/ozzo-validation/v4"
@@ -10,12 +11,18 @@ import (
 	"github.com/selfhostit/splitwiz/ledger"
 )
 
+// maxChanges caps how many scheduled amount changes one series can have.
+const maxChanges = 36
+
 // maxCatchUp caps how many missed occurrences one run adds per series, so a
 // mistaken start date years back can't flood the history.
 const maxCatchUp = 400
 
 func registerRecurring(app core.App) {
 	app.OnRecordValidate("recurring_expenses").BindFunc(func(e *core.RecordEvent) error {
+		if err := applyChanges(e.Record); err != nil {
+			return err
+		}
 		if err := computeOwed(e.Record); err != nil {
 			return err
 		}
@@ -85,7 +92,8 @@ func localDay(t time.Time) time.Time {
 func addDueExpenses(app core.App, id, actor string) error {
 	today := localDay(time.Now())
 
-	filter := "paused = false && next_date <= {:today}"
+	// a series past its end date has nothing left to add
+	filter := "paused = false && next_date <= {:today} && (ends_on = '' || ends_on >= next_date)"
 	params := map[string]any{"today": today.Format(types.DefaultDateLayout)}
 	if id != "" {
 		filter += " && id = {:id}"
@@ -103,17 +111,20 @@ func addDueExpenses(app core.App, id, actor string) error {
 
 	added := false
 	for _, s := range series {
-		n, lastID := 0, ""
+		n, lastID, lastCents := 0, "", int64(0)
 		err := app.RunInTransaction(func(tx core.App) error {
 			var err error
 			next := s.GetDateTime("next_date").Time()
 			for i := 0; i < maxCatchUp && !next.After(today); i++ {
-				id, err := addOccurrence(tx, expenses, s, next)
+				if ended(s, next) {
+					break
+				}
+				id, cents, err := addOccurrence(tx, expenses, s, next)
 				if err != nil {
 					return err
 				}
 				if id != "" {
-					n, lastID = n+1, id
+					n, lastID, lastCents = n+1, id, cents
 				}
 				next, err = ledger.NextDate(next, s.GetString("every"), s.GetInt("anchor_day"))
 				if err != nil {
@@ -135,7 +146,7 @@ func addDueExpenses(app core.App, id, actor string) error {
 		}
 		if n > 0 {
 			added = true
-			notifyRepeating(app, actor, s, lastID, n)
+			notifyRepeating(app, actor, s, lastID, lastCents, n)
 		}
 	}
 	if added {
@@ -144,26 +155,86 @@ func addDueExpenses(app core.App, id, actor string) error {
 	return nil
 }
 
-// addOccurrence returns the new expense's id, or "" when that day was
-// already added.
-func addOccurrence(tx core.App, expenses *core.Collection, s *core.Record, day time.Time) (string, error) {
+// addOccurrence returns the new expense's id and amount, or "" when that
+// day was already added.
+func addOccurrence(tx core.App, expenses *core.Collection, s *core.Record, day time.Time) (string, int64, error) {
 	// never add the same day twice, even if a run is repeated
 	exists, err := tx.FindFirstRecordByFilter("expenses", "recurring = {:id} && date = {:day}",
 		map[string]any{"id": s.Id, "day": day.Format(types.DefaultDateLayout)})
 	if err == nil && exists != nil {
-		return "", nil
+		return "", 0, nil
 	}
 
 	r := core.NewRecord(expenses)
-	for _, f := range []string{"description", "amount_cents", "paid_by", "split_mode", "payer_percent", "other_share_cents", "category", "note", "created_by"} {
+	for _, f := range []string{"description", "paid_by", "split_mode", "payer_percent", "category", "note", "created_by"} {
 		r.Set(f, s.Get(f))
 	}
+	base := int64(s.GetInt("amount_cents"))
+	amount := ledger.AmountOn(base, seriesChanges(s), dayKey(day))
+	r.Set("amount_cents", amount)
+	r.Set("other_share_cents", ledger.ScaleShare(int64(s.GetInt("other_share_cents")), base, amount))
 	r.Set("date", day)
 	r.Set("recurring", s.Id)
 	if err := tx.Save(r); err != nil {
-		return "", err
+		return "", 0, err
 	}
-	return r.Id, nil
+	return r.Id, amount, nil
+}
+
+func dayKey(t time.Time) string {
+	return t.Format("2006-01-02")
+}
+
+// ended reports whether `day` is after the series' last day, if it has one.
+func ended(s *core.Record, day time.Time) bool {
+	end := s.GetDateTime("ends_on")
+	return !end.IsZero() && dayKey(day) > dayKey(end.Time())
+}
+
+// seriesChanges reads the scheduled amount changes; a malformed value
+// counts as none.
+func seriesChanges(s *core.Record) []ledger.AmountChange {
+	var changes []ledger.AmountChange
+	_ = s.UnmarshalJSONField("changes", &changes)
+	return changes
+}
+
+// applyChanges checks the scheduled amount changes, sorts them, and moves
+// the ones that have started by next_date into amount_cents, so the series
+// always shows what its next expense will cost.
+func applyChanges(r *core.Record) error {
+	var changes []ledger.AmountChange
+	if err := r.UnmarshalJSONField("changes", &changes); err != nil {
+		return validation.Errors{"changes": validation.NewError("invalid_changes", "Amount changes must be a list of dates and amounts.")}
+	}
+	if len(changes) > maxChanges {
+		return validation.Errors{"changes": validation.NewError("too_many_changes", "That's too many amount changes.")}
+	}
+	byDay := map[string]int64{}
+	for _, c := range changes {
+		if _, err := time.Parse("2006-01-02", c.From); err != nil || c.Cents < 1 {
+			return validation.Errors{"changes": validation.NewError("invalid_change", "Each change needs a date and an amount above zero.")}
+		}
+		// the same day twice: the last one wins
+		byDay[c.From] = c.Cents
+	}
+
+	next := dayKey(r.GetDateTime("next_date").Time())
+	base := int64(r.GetInt("amount_cents"))
+	future := []ledger.AmountChange{}
+	for from, cents := range byDay {
+		if from > next {
+			future = append(future, ledger.AmountChange{From: from, Cents: cents})
+		}
+	}
+	sort.Slice(future, func(i, j int) bool { return future[i].From < future[j].From })
+
+	if amount := ledger.AmountOn(base, changes, next); amount != base {
+		r.Set("amount_cents", amount)
+		r.Set("other_share_cents", ledger.ScaleShare(int64(r.GetInt("other_share_cents")), base, amount))
+	}
+	r.Set("changes", future)
+	return nil
 }
 
 func authID(e *core.RecordRequestEvent) string {

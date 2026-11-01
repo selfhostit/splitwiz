@@ -123,8 +123,8 @@ func notifyExpense(app core.App, actor *core.Record, r *core.Record, verb, note 
 
 // notifyRepeating tells both people (minus whoever just saved the series)
 // that a repeating expense was added; n > 1 when missed days were caught up.
-func notifyRepeating(app core.App, actor string, s *core.Record, lastID string, n int) {
-	body := s.GetString("description") + " · " + formatEuro(int64(s.GetInt("amount_cents")))
+func notifyRepeating(app core.App, actor string, s *core.Record, lastID string, cents int64, n int) {
+	body := s.GetString("description") + " · " + formatEuro(cents)
 	if n > 1 {
 		body += fmt.Sprintf(" (%d times, catching up)", n)
 	}
@@ -280,9 +280,11 @@ func projectMonth(app core.App, now time.Time) (spent, projected int64, err erro
 	var scheduled []ledger.DayAmount
 	for _, s := range series {
 		day := s.GetDateTime("next_date").Time()
-		for i := 0; i < maxCatchUp && !day.After(lastDay); i++ {
+		changes := seriesChanges(s)
+		for i := 0; i < maxCatchUp && !day.After(lastDay) && !ended(s, day); i++ {
 			if !day.Before(today) {
-				scheduled = append(scheduled, ledger.DayAmount{Day: day.Day(), Cents: int64(s.GetInt("amount_cents"))})
+				cents := ledger.AmountOn(int64(s.GetInt("amount_cents")), changes, dayKey(day))
+				scheduled = append(scheduled, ledger.DayAmount{Day: day.Day(), Cents: cents})
 			}
 			if day, err = ledger.NextDate(day, s.GetString("every"), s.GetInt("anchor_day")); err != nil {
 				break

@@ -2,7 +2,7 @@
   import { app } from '../lib/state.svelte';
   import { formatCents } from '../lib/money';
   import { today, type Recurring } from '../lib/pb';
-  import { upcoming } from '../lib/recurring';
+  import { hasEnded, upcoming } from '../lib/recurring';
 
   let { editRecurring }: { editRecurring: (r: Recurring) => void } = $props();
 
@@ -22,7 +22,7 @@
   };
 
   const list = $derived(upcoming(app.recurring, today(), addDays(today(), days)));
-  const total = $derived(list.reduce((s, o) => s + o.series.amount_cents, 0));
+  const total = $derived(list.reduce((s, o) => s + o.amount_cents, 0));
   const shown = $derived(expanded ? list : list.slice(0, FEW));
 
   function when(day: string): string {
@@ -35,7 +35,7 @@
   const pays = (id: string) => (id === app.me?.id ? 'You pay' : `${app.nameOf(id)} pays`);
 </script>
 
-{#if app.recurring.some((r) => !r.paused)}
+{#if app.recurring.some((r) => !r.paused && !hasEnded(r))}
   <section class="mt-6">
     <div class="flex items-center justify-between gap-2 px-5 pb-1">
       <h2 class="font-semibold">Coming up</h2>
@@ -64,7 +64,14 @@
               <span class="block truncate font-medium">{o.series.description}</span>
               <span class="block truncate text-sm text-slate-500">{when(o.day)} · {pays(o.series.paid_by)}</span>
             </span>
-            <span class="shrink-0 font-semibold text-slate-500">{formatCents(o.series.amount_cents)}</span>
+            <span class="flex shrink-0 flex-col items-end">
+              <span class="font-semibold text-slate-500">{formatCents(o.amount_cents)}</span>
+              {#if o.changed}
+                <span class="mt-0.5 rounded-full bg-amber-100 px-2 text-[11px] font-medium text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">New amount</span>
+              {:else if o.last}
+                <span class="mt-0.5 rounded-full bg-slate-100 px-2 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">🏁 Last one</span>
+              {/if}
+            </span>
           </button>
         {/each}
       </div>

@@ -2,6 +2,7 @@ package ledger
 
 import (
 	"errors"
+	"math"
 	"time"
 )
 
@@ -42,4 +43,36 @@ func onDay(year int, month time.Month, day int, like time.Time) time.Time {
 		day = last
 	}
 	return first.AddDate(0, 0, day-1)
+}
+
+// AmountChange is a scheduled new amount for a recurring expense: every
+// occurrence on or after From (YYYY-MM-DD) costs Cents, until a later change.
+type AmountChange struct {
+	From  string `json:"from"`
+	Cents int64  `json:"amount_cents"`
+}
+
+// AmountOn is what an occurrence on `day` (YYYY-MM-DD) costs: the latest
+// change that has started by then, or `base` before the first one.
+func AmountOn(base int64, changes []AmountChange, day string) int64 {
+	amount, from := base, ""
+	for _, c := range changes {
+		if c.From <= day && c.From >= from {
+			amount, from = c.Cents, c.From
+		}
+	}
+	return amount
+}
+
+// ScaleShare keeps an exact split's share in proportion when the amount
+// changes: a €20 share of €50 becomes €24 of €60.
+func ScaleShare(share, base, amount int64) int64 {
+	if base <= 0 || amount == base {
+		return share
+	}
+	scaled := int64(math.Round(float64(share) * float64(amount) / float64(base)))
+	if scaled > amount {
+		return amount
+	}
+	return scaled
 }

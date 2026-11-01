@@ -3,13 +3,14 @@
   import { app } from '../lib/state.svelte';
   import { formatCents, owedCents, parseAmount } from '../lib/money';
   import { dayOf, toPbDate, today, type Every, type Expense, type Recurring, type SplitMode } from '../lib/pb';
-  import { nextDate, sameCharge } from '../lib/recurring';
+  import { hasEnded, nextDate, sameCharge } from '../lib/recurring';
   import { startSeries } from '../lib/series';
   import { favorites, lastLike } from '../lib/quickadd';
   import { isLocal } from '../lib/outbox';
   import { byPeriod, rangeBounds } from '../lib/stats';
   import PeriodBars from './PeriodBars.svelte';
   import Comments from './Comments.svelte';
+  import RepeatPlan, { type ChangeRow } from './RepeatPlan.svelte';
 
   let {
     expense = null,
@@ -35,6 +36,12 @@
   let day = $state(initialTemplate ? dayOf(initialTemplate.next_date) : initial ? dayOf((initial as Expense).date) : today());
   let every = $state<Every | ''>(initialTemplate?.every ?? '');
   let note = $state(initial?.note ?? '');
+  // when the series stops and how its amount changes over time
+  let ends = $state(initialTemplate?.ends_on ? dayOf(initialTemplate.ends_on) : '');
+  let changeRows = $state<ChangeRow[]>(
+    (initialTemplate?.changes ?? []).map((c, i) => ({ key: i + 1, from: c.from, amountText: centsText(c.amount_cents) })),
+  );
+  let planValid = $state(true);
   let busy = $state(false);
   let error = $state('');
 
@@ -49,7 +56,11 @@
   const payerName = $derived(app.nameOf(paidBy));
   const otherId = $derived(app.users.find((u) => u.id !== paidBy)?.id ?? '');
   const otherName = $derived(app.nameOf(otherId));
-  const valid = $derived(amount !== null && owed !== null && description.trim() !== '' && !!paidBy);
+  const valid = $derived(amount !== null && owed !== null && description.trim() !== '' && !!paidBy && (!every || planValid));
+  // the series' first expense still to come
+  const planStart = $derived(every ? (expense ? nextDate(day, every) : day) : '');
+  // a finished series can still be edited, and restarted with a later end
+  const ended = !!initialTemplate && hasEnded(initialTemplate);
 
   const repeats: { id: Every | ''; label: string }[] = [
     { id: '', label: 'Never' },
@@ -119,21 +130,28 @@
       // an existing expense keeps its comments instead
       ...(expense ? {} : { note: note.trim() }),
     };
+    const plan = {
+      ends_on: ends ? toPbDate(ends) : '',
+      changes: changeRows
+        .map((r) => ({ from: r.from, amount_cents: parseAmount(r.amountText) ?? 0 }))
+        .filter((c) => c.from > planStart && c.amount_cents > 0 && (!ends || c.from <= ends))
+        .sort((a, b) => a.from.localeCompare(b.from)),
+    };
     try {
       if (template) {
-        await app.write('recurring_expenses', 'update', template.id, { ...data, every, next_date: toPbDate(day) });
+        await app.write('recurring_expenses', 'update', template.id, { ...data, ...plan, every, next_date: toPbDate(day) });
       } else if (expense) {
         await app.write('expenses', 'update', expense.id, { ...data, date: toPbDate(day) });
         if (every) {
           const saved = { ...expense, ...data, category: data.category ?? '', date: toPbDate(day) } as Expense;
           // earlier copies of the same charge become part of the series too
           const copies = app.expenses.filter((x) => x.id !== saved.id && !x.recurring && sameCharge(x, saved));
-          await startSeries(saved, every, [saved, ...copies]);
+          await startSeries(saved, every, [saved, ...copies], plan);
           app.reload();
         }
       } else if (every) {
         // the server adds the first expense when its date has come
-        await app.write('recurring_expenses', 'create', null, { ...data, every, next_date: toPbDate(day) });
+        await app.write('recurring_expenses', 'create', null, { ...data, ...plan, every, next_date: toPbDate(day) });
       } else {
         await app.write('expenses', 'create', null, { ...data, date: toPbDate(day) });
       }
@@ -272,8 +290,18 @@
               : editingTemplate
                 ? `Next added on ${day}`
                 : 'Added today, then'}
-          {every === 'week' ? 'every week' : every === 'month' ? 'every month on the same day' : 'every year'}.
+          {every === 'week' ? 'every week' : every === 'month' ? 'every month on the same day' : 'every year'}{ends && ends >= planStart ? ', until the end date below' : ''}.
         </p>
+        <RepeatPlan
+          {every}
+          start={planStart}
+          anchorDay={initialTemplate?.anchor_day ?? 0}
+          {amount}
+          allowEnded={ended}
+          bind:ends
+          bind:changes={changeRows}
+          bind:valid={planValid}
+        />
       {/if}
     </div>
   {:else if series}

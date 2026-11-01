@@ -27,6 +27,9 @@ export type Expense = {
 
 export type Every = 'week' | 'month' | 'year';
 
+/** From `from` (YYYY-MM-DD) on, each expense of a series costs amount_cents. */
+export type AmountChange = { from: string; amount_cents: number };
+
 /** A template the server turns into an expense on each due date. */
 export type Recurring = {
   id: string;
@@ -43,6 +46,10 @@ export type Recurring = {
   next_date: string;
   anchor_day: number;
   paused: boolean;
+  /** last day an expense may be added; '' repeats forever */
+  ends_on: string;
+  /** future amount changes, soonest first; the server moves started ones into amount_cents */
+  changes: AmountChange[] | null;
   created: string;
 };
 
