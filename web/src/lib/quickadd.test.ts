@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Expense } from './pb';
-import { favorites, lastLike } from './quickadd';
+import { favorites, lastLike, suggest } from './quickadd';
 
 let n = 0;
 const ex = (date: string, description: string, cents = 100): Expense =>
@@ -35,5 +35,20 @@ describe('favorites', () => {
 
   it('stops at n', () => {
     expect(favorites(list, '2026-10-20', 1)).toHaveLength(1);
+  });
+});
+
+describe('suggest', () => {
+  it('puts words starting with the text first, then the most used', () => {
+    const more = [...list, ex('2026-09-01', 'Big coffee beans', 1800), ex('2026-09-02', 'Decaf', 900)];
+    expect(suggest(more, 'co').map((e) => e.description)).toEqual(['Coffee', 'Big coffee beans']);
+    expect(suggest(more, 'caf').map((e) => e.description)).toEqual(['Decaf']);
+  });
+
+  it('gives the latest copy, and nothing for an exact match or blank text', () => {
+    expect(suggest(list, 'groc')).toHaveLength(1);
+    expect(suggest(list, 'groc')[0].amount_cents).toBe(4200);
+    expect(suggest(list, 'coffee')).toEqual([]);
+    expect(suggest(list, ' ')).toEqual([]);
   });
 });
