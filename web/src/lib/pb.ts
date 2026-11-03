@@ -27,6 +27,8 @@ export type Expense = {
   recurring: string;
   /** who last added or changed it in the app; '' for the server's own saves */
   updated_by?: string;
+  /** set on imported expenses (splitwise:…, bank:…) so a file can't add them twice */
+  import_ref?: string;
   created: string;
   updated?: string;
 };

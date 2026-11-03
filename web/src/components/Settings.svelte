@@ -4,6 +4,7 @@
   import { formatCents } from '../lib/money';
   import { dayOf, pb, today, type Recurring } from '../lib/pb';
   import ImportSplitwise from './ImportSplitwise.svelte';
+  import BankImport from './BankImport.svelte';
   import Categories from './Categories.svelte';
   import Rules from './Rules.svelte';
   import { hasEnded, suggestMonthly, type Suggestion } from '../lib/recurring';
@@ -226,6 +227,8 @@
   <Categories />
 
   <Rules />
+
+  <BankImport />
 
   <ImportSplitwise />
 

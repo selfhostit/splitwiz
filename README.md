@@ -47,6 +47,7 @@ A small, self-hosted alternative to Splitwise for two people. No ads, no daily l
 - **Categories** are yours to manage under Settings: add, rename, reorder, change the emoji, or delete. Each one can have its **own monthly limit**; Stats shows what's left and you both get a notification at 90%.
 - **Stats** for this month, last month, 3 or 12 months, this year or all time: total spent, spending per month with a dashed average line, a breakdown by category (with who paid what in each) you can drill into, and the biggest expenses.
 - **Category trend on every expense**: open an expense to see what you spent in its category over the last three months.
+- **Import a bank statement**: pick a CSV export of your account or card under Settings. Splitwiz guesses the columns and date format (you can correct them), lists the payments out, ticks the ones a rule matches, and flags ones that look added already. Tick what you shared and import; importing the same file again skips what's already in.
 - **Import from Splitwise**: pick a group's CSV export under Settings. Importing the same file again only adds new rows.
 - **Live sync** between both phones, **light and dark mode**, and a **CSV export** of everything.
 - **Installable web app (PWA)** for Android and iOS, with its own home-screen icon. Long-press the icon for **Add expense** and **Settle up** shortcuts.

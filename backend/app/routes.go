@@ -44,6 +44,7 @@ func registerRoutes(se *core.ServeEvent) {
 	})
 
 	g.POST("/import/splitwise", importSplitwise)
+	g.POST("/import/bank", importBank)
 
 	// everything up to now counts as seen by the signed-in person
 	g.POST("/seen", func(e *core.RequestEvent) error {
