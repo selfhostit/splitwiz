@@ -1,5 +1,6 @@
 import { syncPush } from './push';
 import { pb, type Budget, type Category, type Comment, type Expense, type Recurring, type Settlement, type Summary, type User } from './pb';
+import { unseen, type Why } from './unseen';
 import { enqueue, isLocal, loadOutbox, localId, overlay, pbNow, saveOutbox, unreachable, type Collection, type Op } from './outbox';
 
 export type Entry =
@@ -79,6 +80,10 @@ class AppState {
 
   other = $derived<User | undefined>(this.users.find((u) => u.id !== this.me?.id));
 
+  // what the other person added or changed since I last marked it all seen
+  seenAt = $derived(this.users.find((u) => u.id === this.me?.id)?.seen_at ?? '');
+  unseen = $derived<Map<string, Why>>(unseen(this.entries, this.comments, this.me?.id ?? '', this.seenAt));
+
   private server: Snapshot = this.me ? loadCache() : empty;
   // deleted, but still undoable: hidden here, sent to the NAS later
   private pending = new Map<string, { collection: Collection; timer: ReturnType<typeof setTimeout> }>();
@@ -107,6 +112,24 @@ class AppState {
 
   category(id: string): Category | undefined {
     return this.categories.find((c) => c.id === id);
+  }
+
+  /** Counts everything up to now as seen, on every phone of mine. */
+  async markSeen() {
+    const me = this.me?.id;
+    if (!me) return;
+    const mark = (seen_at: string) => {
+      this.server = { ...this.server, users: this.server.users.map((u) => (u.id === me ? { ...u, seen_at } : u)) };
+      saveCache(this.server);
+      this.refresh();
+    };
+    mark(pbNow());
+    try {
+      const res = await pb.send<{ seen_at: string }>('/api/splitwiz/seen', { method: 'POST' });
+      mark(res.seen_at);
+    } catch {
+      // offline: hidden here until the next reload brings the NAS's time back
+    }
   }
 
   async login(email: string, password: string) {

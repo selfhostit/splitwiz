@@ -9,6 +9,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/types"
 
 	"github.com/selfhostit/splitwiz/ledger"
 )
@@ -43,6 +44,19 @@ func registerRoutes(se *core.ServeEvent) {
 	})
 
 	g.POST("/import/splitwise", importSplitwise)
+
+	// everything up to now counts as seen by the signed-in person
+	g.POST("/seen", func(e *core.RequestEvent) error {
+		u, err := e.App.FindRecordById("users", e.Auth.Id)
+		if err != nil {
+			return e.NotFoundError("", err)
+		}
+		u.Set("seen_at", types.NowDateTime())
+		if err := e.App.SaveNoValidate(u); err != nil {
+			return e.InternalServerError("", err)
+		}
+		return e.JSON(http.StatusOK, map[string]any{"seen_at": u.GetDateTime("seen_at")})
+	})
 
 	registerPushRoutes(g)
 }

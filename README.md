@@ -31,6 +31,7 @@ A small, self-hosted alternative to Splitwise for two people. No ads, no daily l
 - **Add an expense in a few taps**: amount, what it was for, who paid, and how to split it (50/50, percentage, exact amount, or "the other person owes all").
 - **Quick add**: the expenses you add most often show up as one-tap chips, and typing a past description fills in who paid, the split and the category from last time.
 - **One balance** on the home screen: who owes whom, and how much.
+- **See what's new**: Home tells you what the other person added, changed or commented on since you last looked ("Sam added 2 and changed 1"), with a dot on each of those rows until you tap Mark as seen.
 - **Settle up** with one tap, in full or in part.
 - **History** grouped by month, with search and filters (type, who paid, category, amount). Export just what you filtered as CSV. Swipe a row left to edit or delete it.
 - **Undo** instead of "Are you sure?": deleting anything shows an Undo bar for a few seconds.

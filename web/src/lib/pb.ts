@@ -4,7 +4,8 @@ import PocketBase from 'pocketbase';
 export const pb = new PocketBase(window.location.origin);
 pb.autoCancellation(false);
 
-export type User = { id: string; name: string; email: string };
+/** seen_at: when they last marked everything as seen, see unseen.ts */
+export type User = { id: string; name: string; email: string; seen_at?: string };
 /** monthly_cents is the category's own monthly limit; 0 = none. */
 export type Category = { id: string; name: string; emoji: string; sort: number; monthly_cents: number };
 export type SplitMode = 'equal' | 'percent' | 'exact' | 'full';
@@ -24,7 +25,10 @@ export type Expense = {
   /** e.g. ['lisbon-2026']; see tags.ts */
   tags: string[] | null;
   recurring: string;
+  /** who last added or changed it in the app; '' for the server's own saves */
+  updated_by?: string;
   created: string;
+  updated?: string;
 };
 
 export type Every = 'week' | 'month' | 'year';
@@ -70,7 +74,9 @@ export type Settlement = {
   amount_cents: number;
   date: string;
   note: string;
+  updated_by?: string;
   created: string;
+  updated?: string;
 };
 
 export type Summary = {

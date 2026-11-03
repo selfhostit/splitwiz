@@ -44,6 +44,15 @@ func Register(app core.App) {
 	app.OnRecordCreateRequest("expenses", "settlements").BindFunc(func(e *core.RecordRequestEvent) error {
 		if e.Auth != nil {
 			e.Record.Set("created_by", e.Auth.Id)
+			e.Record.Set("updated_by", e.Auth.Id)
+		}
+		return e.Next()
+	})
+
+	// so the other person's app can show what changed since they looked
+	app.OnRecordUpdateRequest("expenses", "settlements").BindFunc(func(e *core.RecordRequestEvent) error {
+		if e.Auth != nil {
+			e.Record.Set("updated_by", e.Auth.Id)
 		}
 		return e.Next()
 	})
