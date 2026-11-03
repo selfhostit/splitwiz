@@ -21,6 +21,8 @@ export type Expense = {
   category: string;
   date: string;
   note: string;
+  /** e.g. ['lisbon-2026']; see tags.ts */
+  tags: string[] | null;
   recurring: string;
   created: string;
 };
@@ -42,6 +44,8 @@ export type Recurring = {
   owed_cents: number;
   category: string;
   note: string;
+  /** passed on to every expense the series adds */
+  tags: string[] | null;
   every: Every;
   next_date: string;
   anchor_day: number;

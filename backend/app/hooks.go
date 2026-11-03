@@ -25,6 +25,7 @@ func Register(app core.App) {
 	registerRecurring(app)
 	registerComments(app)
 	registerNotifications(app)
+	registerTags(app)
 
 	app.OnRecordValidate("expenses").BindFunc(func(e *core.RecordEvent) error {
 		if err := computeOwed(e.Record); err != nil {
@@ -83,4 +84,19 @@ func computeOwed(r *core.Record) error {
 
 	r.Set("owed_cents", owed)
 	return nil
+}
+
+// registerTags keeps every expense's and series' tags cleaned up.
+func registerTags(app core.App) {
+	app.OnRecordValidate("expenses", "recurring_expenses").BindFunc(func(e *core.RecordEvent) error {
+		normalizeTags(e.Record)
+		return e.Next()
+	})
+}
+
+// normalizeTags stores the record's tags cleaned up, always as a list.
+func normalizeTags(r *core.Record) {
+	var tags []string
+	_ = r.UnmarshalJSONField("tags", &tags)
+	r.Set("tags", ledger.NormalizeTags(tags))
 }

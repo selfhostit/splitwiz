@@ -7,6 +7,7 @@
   import { startSeries } from '../lib/series';
   import { favorites, lastLike, suggest } from '../lib/quickadd';
   import { isLocal } from '../lib/outbox';
+  import { addTag, recentTags } from '../lib/tags';
   import { byPeriod, rangeBounds } from '../lib/stats';
   import PeriodBars from './PeriodBars.svelte';
   import Comments from './Comments.svelte';
@@ -36,6 +37,8 @@
   let day = $state(initialTemplate ? dayOf(initialTemplate.next_date) : initial ? dayOf((initial as Expense).date) : today());
   let every = $state<Every | ''>(initialTemplate?.every ?? '');
   let note = $state(initial?.note ?? '');
+  let tags = $state<string[]>([...(initial?.tags ?? [])]);
+  let tagText = $state('');
   // when the series stops and how its amount changes over time
   let ends = $state(initialTemplate?.ends_on ? dayOf(initialTemplate.ends_on) : '');
   let changeRows = $state<ChangeRow[]>(
@@ -123,6 +126,23 @@
     }
   }
 
+  // recent trips and events, one tap to add
+  const tagSuggestions = $derived(recentTags(app.expenses, today()).filter((t) => !tags.includes(t)));
+
+  function commitTag() {
+    tags = addTag(tags, tagText);
+    tagText = '';
+  }
+
+  function onTagKey(e: KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ',' || (e.key === ' ' && tagText.trim())) {
+      e.preventDefault();
+      commitTag();
+    } else if (e.key === 'Backspace' && !tagText && tags.length) {
+      tags = tags.slice(0, -1);
+    }
+  }
+
   const adding = !initial;
   const favs = $derived(adding ? favorites(app.expenses, today()) : []);
 
@@ -163,6 +183,7 @@
       payer_percent: mode === 'percent' ? payerPercent : 0,
       other_share_cents: mode === 'exact' ? otherShare : 0,
       category: category || null,
+      tags: addTag(tags, tagText),
       // an existing expense keeps its comments instead
       ...(expense ? {} : { note: note.trim() }),
     };
@@ -408,6 +429,36 @@
         Changes here only affect this one. Edit the series under Settings.
       </p>
     {/if}
+
+    <div class="px-4 py-3">
+      <div class="flex min-h-8 flex-wrap items-center gap-2">
+        <span class="text-lg" aria-hidden="true">🏷️</span>
+        {#each tags as t (t)}
+          <span class="flex items-center gap-1 rounded-full bg-brand-50 py-1 pr-1 pl-3 text-sm font-medium text-brand-700 dark:bg-brand-700/30 dark:text-brand-100">
+            #{t}
+            <button type="button" class="flex h-6 w-6 items-center justify-center rounded-full text-base leading-none" aria-label={`Remove tag ${t}`} onclick={() => (tags = tags.filter((x) => x !== t))}>×</button>
+          </span>
+        {/each}
+        <input
+          class="min-w-24 flex-1 rounded-none border-0 bg-transparent px-0 py-1 focus:ring-0 dark:bg-transparent"
+          placeholder={tags.length ? 'Another tag' : 'Tag a trip or event (optional)'}
+          aria-label="Tag"
+          autocomplete="off"
+          autocapitalize="off"
+          maxlength="40"
+          bind:value={tagText}
+          onkeydown={onTagKey}
+          onblur={commitTag}
+        />
+      </div>
+      {#if tagSuggestions.length}
+        <div class="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]" role="group" aria-label="Recent tags">
+          {#each tagSuggestions as t (t)}
+            <button type="button" class="chip py-1.5" onclick={() => (tags = addTag(tags, t))}>+ #{t}</button>
+          {/each}
+        </div>
+      {/if}
+    </div>
 
     {#if !expense}
       <label class="row">

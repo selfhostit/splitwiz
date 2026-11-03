@@ -111,6 +111,9 @@
             ? ` · 💬 ${comments}`
             : ''}
         </span>
+        {#if e.tags?.length}
+          <span class="block truncate text-xs font-medium text-brand-700 dark:text-brand-100">{e.tags.map((t) => '#' + t).join(' ')}</span>
+        {/if}
       </span>
       <span class="shrink-0 text-right">
         {#if e.owed_cents === 0}

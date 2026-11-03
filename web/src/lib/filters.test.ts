@@ -13,7 +13,9 @@ const payment: Entry = {
   created: '',
   item: { id: 's', from_user: 'b', to_user: 'a', amount_cents: 5000, note: 'thanks, all good', date: '2026-10-02 12:00:00.000Z' } as Settlement,
 };
-const entries = [expense('1', 'Groceries', 4000, 'a', 'food'), expense('2', 'Train', 1200, 'b', 'transport'), payment];
+const train = expense('2', 'Train', 1200, 'b', 'transport');
+(train.item as Expense).tags = ['lisbon', 'trip'];
+const entries = [expense('1', 'Groceries', 4000, 'a', 'food'), train, payment];
 const text = (e: Entry) => (e.kind === 'expense' ? [e.item.description] : ['settlement payment', e.item.note]);
 const ids = (es: Entry[]) => es.map((e) => e.item.id);
 
@@ -26,6 +28,7 @@ describe('filterEntries', () => {
     expect(ids(filterEntries(entries, '', { ...noFilters, kind: 'settlement' }, text))).toEqual(['s']);
     expect(ids(filterEntries(entries, '', { ...noFilters, paidBy: 'b' }, text))).toEqual(['2', 's']);
     expect(ids(filterEntries(entries, '', { ...noFilters, category: 'food' }, text))).toEqual(['1']);
+    expect(ids(filterEntries(entries, '', { ...noFilters, tag: 'lisbon' }, text))).toEqual(['2']);
     expect(ids(filterEntries(entries, '', { ...noFilters, min: 1500, max: 4000 }, text))).toEqual(['1']);
   });
 
@@ -43,8 +46,9 @@ describe('toCsv', () => {
   it('writes the export columns and quotes where needed', () => {
     const csv = toCsv(entries, (id) => (id === 'a' ? 'Alex' : 'Sam'), (c) => c, (id) => (id === '1' ? ['Alex: "big" shop'] : []));
     const lines = csv.trim().split('\r\n');
-    expect(lines[0]).toBe('type,date,description,category,amount,paid_by,split_mode,owed_by_other,note');
-    expect(lines[1]).toBe('expense,2026-10-01,Groceries,food,40.00,Alex,equal,20.00,"Alex: ""big"" shop"');
-    expect(lines[3]).toBe('settlement,2026-10-02,Sam paid Alex,,50.00,Sam,,,"thanks, all good"');
+    expect(lines[0]).toBe('type,date,description,category,amount,paid_by,split_mode,owed_by_other,note,tags');
+    expect(lines[1]).toBe('expense,2026-10-01,Groceries,food,40.00,Alex,equal,20.00,"Alex: ""big"" shop",');
+    expect(lines[2]).toBe('expense,2026-10-01,Train,transport,12.00,Sam,equal,6.00,,#lisbon #trip');
+    expect(lines[3]).toBe('settlement,2026-10-02,Sam paid Alex,,50.00,Sam,,,"thanks, all good",');
   });
 });
