@@ -61,6 +61,18 @@ export type Recurring = {
   created: string;
 };
 
+/** Fills in a new expense whose description contains `match`; empty fields leave it as it is. */
+export type Rule = {
+  id: string;
+  match: string;
+  category: string;
+  paid_by: string;
+  split_mode: '' | 'equal' | 'percent' | 'full';
+  payer_percent: number;
+  tags: string[] | null;
+  created: string;
+};
+
 /** One message in an expense's comment thread. */
 export type Comment = { id: string; expense: string; author: string; text: string; created: string };
 

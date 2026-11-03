@@ -1,5 +1,5 @@
 import { syncPush } from './push';
-import { pb, type Budget, type Category, type Comment, type Expense, type Recurring, type Settlement, type Summary, type User } from './pb';
+import { pb, type Budget, type Category, type Comment, type Expense, type Recurring, type Rule, type Settlement, type Summary, type User } from './pb';
 import { unseen, type Why } from './unseen';
 import { enqueue, isLocal, loadOutbox, localId, overlay, pbNow, saveOutbox, unreachable, type Collection, type Op } from './outbox';
 
@@ -16,11 +16,12 @@ type Snapshot = {
   recurring: Recurring[];
   budget: Budget | null;
   comments: Comment[];
+  rules: Rule[];
   summary: Summary | null;
 };
 
 const CACHE = 'splitwiz-cache';
-const empty: Snapshot = { users: [], categories: [], expenses: [], settlements: [], recurring: [], budget: null, comments: [], summary: null };
+const empty: Snapshot = { users: [], categories: [], expenses: [], settlements: [], recurring: [], budget: null, comments: [], rules: [], summary: null };
 
 /** How long a deletion can be undone. */
 export const UNDO_MS = 5000;
@@ -52,6 +53,7 @@ class AppState {
   recurring = $state<Recurring[]>([]);
   budget = $state<Budget | null>(null);
   comments = $state<Comment[]>([]);
+  rules = $state<Rule[]>([]);
   summary = $state<Summary | null>(null);
   loading = $state(false);
   error = $state('');
@@ -158,7 +160,7 @@ class AppState {
     syncPush();
     this.stop();
     try {
-      for (const name of ['expenses', 'settlements', 'recurring_expenses', 'budget', 'expense_comments', 'categories']) {
+      for (const name of ['expenses', 'settlements', 'recurring_expenses', 'budget', 'expense_comments', 'categories', 'rules']) {
         this.unsubscribers.push(await pb.collection(name).subscribe('*', () => this.scheduleReload()));
       }
     } catch {
@@ -188,6 +190,7 @@ class AppState {
     this.settlements = view('settlements', s.settlements);
     this.recurring = view('recurring_expenses', s.recurring);
     this.comments = view('expense_comments', s.comments);
+    this.rules = view('rules', s.rules);
     this.budget = s.budget;
     this.summary = s.summary;
   }
@@ -292,7 +295,7 @@ class AppState {
   }
 
   private dropFromServer(collection: Collection, id: string) {
-    const key = ({ expenses: 'expenses', settlements: 'settlements', recurring_expenses: 'recurring', expense_comments: 'comments', categories: 'categories' } as const)[collection];
+    const key = ({ expenses: 'expenses', settlements: 'settlements', recurring_expenses: 'recurring', expense_comments: 'comments', categories: 'categories', rules: 'rules' } as const)[collection];
     this.server = { ...this.server, [key]: (this.server[key] as { id: string }[]).filter((x) => x.id !== id) };
   }
 
@@ -301,7 +304,7 @@ class AppState {
     this.loading = true;
     try {
       await this.sync();
-      const [users, categories, expenses, settlements, recurring, budget, comments, summary] = await Promise.all([
+      const [users, categories, expenses, settlements, recurring, budget, comments, rules, summary] = await Promise.all([
         pb.collection('users').getFullList<User>({ sort: 'created' }),
         pb.collection('categories').getFullList<Category>({ sort: 'sort,name' }),
         pb.collection('expenses').getFullList<Expense>({ sort: '-date,-created' }),
@@ -309,9 +312,10 @@ class AppState {
         pb.collection('recurring_expenses').getFullList<Recurring>({ sort: 'next_date' }),
         pb.collection('budget').getFullList<Budget>(),
         pb.collection('expense_comments').getFullList<Comment>({ sort: 'created' }),
+        pb.collection('rules').getFullList<Rule>({ sort: 'match' }),
         pb.send<Summary>('/api/splitwiz/summary', {}),
       ]);
-      this.server = { users, categories, expenses, settlements, recurring, budget: budget[0] ?? null, comments, summary };
+      this.server = { users, categories, expenses, settlements, recurring, budget: budget[0] ?? null, comments, rules, summary };
       saveCache(this.server);
       this.refresh();
       this.error = '';

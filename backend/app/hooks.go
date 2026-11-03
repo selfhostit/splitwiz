@@ -95,9 +95,9 @@ func computeOwed(r *core.Record) error {
 	return nil
 }
 
-// registerTags keeps every expense's and series' tags cleaned up.
+// registerTags keeps the tags of every expense, series and rule cleaned up.
 func registerTags(app core.App) {
-	app.OnRecordValidate("expenses", "recurring_expenses").BindFunc(func(e *core.RecordEvent) error {
+	app.OnRecordValidate("expenses", "recurring_expenses", "rules").BindFunc(func(e *core.RecordEvent) error {
 		normalizeTags(e.Record)
 		return e.Next()
 	})

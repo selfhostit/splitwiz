@@ -8,6 +8,8 @@
   import { favorites, lastLike, suggest } from '../lib/quickadd';
   import { isLocal } from '../lib/outbox';
   import { addTag, recentTags } from '../lib/tags';
+  import { matchRule } from '../lib/rules';
+  import type { Rule } from '../lib/pb';
   import { byPeriod, rangeBounds } from '../lib/stats';
   import PeriodBars from './PeriodBars.svelte';
   import Comments from './Comments.svelte';
@@ -174,14 +176,33 @@
   function pick(e: Expense) {
     description = e.description;
     fill(e, true);
+    ruleUsed = matchRule(app.rules, description);
+    if (ruleUsed) applyRule(ruleUsed);
   }
 
-  // picking a past description pre-fills how it was paid and split last time
+  // a rule's settings, applied once each time a different rule matches
+  let ruleUsed = $state<Rule | undefined>();
+
+  function applyRule(r: Rule) {
+    if (r.category) category = r.category;
+    if (r.paid_by) paidBy = r.paid_by;
+    if (r.split_mode) mode = r.split_mode;
+    if (r.split_mode === 'percent') payerPercent = r.payer_percent;
+    for (const t of r.tags ?? []) tags = addTag(tags, t);
+  }
+
+  // picking a past description pre-fills how it was paid and split last
+  // time; a matching rule then has the last word
   function onDescriptionChange() {
     const past = lastLike(app.expenses, description);
-    if (!past) return;
-    if (adding) fill(past, false);
-    else if (!category) category = past.category;
+    if (past) {
+      if (adding) fill(past, false);
+      else if (!category) category = past.category;
+    }
+    if (!adding) return;
+    const rule = matchRule(app.rules, description);
+    if (rule && rule.id !== ruleUsed?.id) applyRule(rule);
+    ruleUsed = rule;
   }
 
   async function save(e: SubmitEvent) {
@@ -301,6 +322,12 @@
         onblur={() => (descFocused = false)}
       />
     </div>
+
+    {#if ruleUsed}
+      <p class="flex items-center gap-2 px-1 text-sm text-brand-700 dark:text-brand-100">
+        <span aria-hidden="true">✨</span> Filled in by the rule for “{ruleUsed.match}”
+      </p>
+    {/if}
 
     {#if suggestions.length}
       <!-- in the page, not floating over it, so nothing below is hidden -->
