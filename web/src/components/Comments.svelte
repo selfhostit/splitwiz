@@ -32,7 +32,7 @@
 </script>
 
 <div class="flex flex-col gap-2">
-  <p class="text-sm font-medium text-slate-600 dark:text-slate-300">Comments</p>
+  <p class="label mb-0">Comments</p>
   {#each comments as c (c.id)}
     {@const mine = c.author === app.me?.id}
     <div class="rounded-2xl px-3 py-2 {mine ? 'bg-brand-50 dark:bg-brand-700/20' : 'bg-slate-100 dark:bg-slate-800'}">

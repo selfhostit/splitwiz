@@ -29,9 +29,15 @@
   aria-label={title}
 >
   <div class="mx-auto mb-3 h-1.5 w-10 rounded-full bg-slate-300 dark:bg-slate-700"></div>
-  <div class="mb-4 flex items-center justify-between">
-    <h2 class="text-lg font-semibold">{title}</h2>
-    <button class="rounded-full px-3 py-1 text-sm text-slate-500" onclick={onclose}>Close</button>
+  <div class="mb-5 flex items-center justify-between">
+    <h2 class="text-xl font-semibold">{title}</h2>
+    <button
+      class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200 dark:bg-slate-800 dark:text-slate-400"
+      aria-label="Close"
+      onclick={onclose}
+    >
+      <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5 5 15" /></svg>
+    </button>
   </div>
   {@render children()}
 </div>

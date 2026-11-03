@@ -34,3 +34,25 @@ export function favorites(expenses: Expense[], today: string, n = 4): Expense[] 
     .slice(0, n)
     .map((s) => s.latest);
 }
+
+/**
+ * Past expenses whose description matches what's being typed, each as its
+ * latest copy: descriptions starting with the text first, then ones that
+ * contain it, the more often used first. An exact match isn't suggested.
+ */
+export function suggest(expenses: Expense[], typed: string, n = 4): Expense[] {
+  const q = key(typed);
+  if (!q) return [];
+  const seen = new Map<string, { latest: Expense; count: number; starts: boolean }>();
+  for (const e of expenses) {
+    const k = key(e.description);
+    if (k === q || !k.includes(q)) continue;
+    const s = seen.get(k);
+    if (s) s.count++;
+    else seen.set(k, { latest: e, count: 1, starts: k.startsWith(q) || k.includes(' ' + q) });
+  }
+  return [...seen.values()]
+    .sort((a, b) => Number(b.starts) - Number(a.starts) || b.count - a.count)
+    .slice(0, n)
+    .map((s) => s.latest);
+}

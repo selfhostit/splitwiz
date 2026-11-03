@@ -172,14 +172,14 @@
   const shown = $derived(timeline && active !== null && active < timeline.list.length ? timeline.list[active] : null);
 </script>
 
-<div class="mt-3 flex flex-col gap-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+<div class="mt-4 flex flex-col gap-5">
   <!-- when it ends -->
   <div>
     <div class="flex items-center justify-between gap-2">
       <p class="text-sm font-medium text-slate-600 dark:text-slate-300">Ends</p>
-      <div class="flex gap-1.5" role="group" aria-label="Ends">
-        <button type="button" class="chip px-3 py-1.5" aria-pressed={!ends} onclick={() => setEnds(false)}>Never</button>
-        <button type="button" class="chip px-3 py-1.5" aria-pressed={!!ends} onclick={() => !ends && setEnds(true)}>On a date</button>
+      <div class="seg w-48 [&>button]:py-1.5" role="group" aria-label="Ends">
+        <button type="button" aria-pressed={!ends} onclick={() => setEnds(false)}>Never</button>
+        <button type="button" aria-pressed={!!ends} onclick={() => !ends && setEnds(true)}>On a date</button>
       </div>
     </div>
     {#if ends}
