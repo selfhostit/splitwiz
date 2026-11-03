@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
   import { app } from '../lib/state.svelte';
-  import { formatCents, owedCents, parseAmount } from '../lib/money';
+  import { evalAmount, formatCents, isSum, owedCents, parseAmount } from '../lib/money';
   import { dayOf, toPbDate, today, type Every, type Expense, type Recurring, type SplitMode } from '../lib/pb';
   import { hasEnded, nextDate, sameCharge } from '../lib/recurring';
   import { startSeries } from '../lib/series';
@@ -53,7 +53,21 @@
     if (!initial) amountInput?.focus();
   });
 
-  const amount = $derived(parseAmount(amountText));
+  // the amount field also works out sums like 12.50+8.30
+  const amount = $derived(evalAmount(amountText));
+  const summing = $derived(isSum(amountText));
+  let amountFocused = $state(false);
+
+  function typeOp(op: string) {
+    amountText = amountText.trimEnd().replace(/[+\-×÷]$/, '') + op;
+    amountInput?.focus();
+  }
+
+  // a worked-out sum becomes its result once the field is left
+  function onAmountBlur() {
+    amountFocused = false;
+    if (summing && amount) amountText = centsText(amount);
+  }
   const otherShare = $derived(mode === 'exact' ? (parseAmount(otherShareText) ?? (otherShareText.trim() === '0' ? 0 : NaN)) : 0);
   const owed = $derived(amount ? owedCents(amount, mode, payerPercent, otherShare) : null);
   const payerName = $derived(app.nameOf(paidBy));
@@ -247,13 +261,33 @@
         <span class="text-3xl font-semibold text-slate-400">€</span>
         <input
           bind:this={amountInput}
-          class="min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 text-5xl font-bold tracking-tight focus:ring-0 dark:bg-transparent"
+          class="min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 font-bold tracking-tight focus:ring-0 dark:bg-transparent {summing ? 'text-3xl' : 'text-5xl'}"
           inputmode="decimal"
           placeholder="0.00"
           aria-label="Amount"
           bind:value={amountText}
+          onfocus={() => (amountFocused = true)}
+          onblur={onAmountBlur}
         />
       </div>
+      {#if summing || amountFocused}
+        <div class="flex items-center gap-1.5 px-5 pb-3">
+          {#each ['+', '−', '×', '÷'] as op (op)}
+            <button
+              type="button"
+              class="h-9 w-11 rounded-xl bg-white text-lg font-semibold text-slate-600 active:bg-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:active:bg-slate-700"
+              aria-label={{ '+': 'Plus', '−': 'Minus', '×': 'Times', '÷': 'Divided by' }[op]}
+              onpointerdown={(ev) => ev.preventDefault()}
+              onclick={() => typeOp(op)}>{op}</button
+            >
+          {/each}
+          {#if summing}
+            <span class="ml-auto text-sm font-medium {amount ? 'text-brand-700 dark:text-brand-100' : 'text-slate-400'}" aria-live="polite">
+              {amount ? `= ${formatCents(amount)}` : '= …'}
+            </span>
+          {/if}
+        </div>
+      {/if}
       <div class="mx-5 border-t border-slate-200 dark:border-slate-700"></div>
       <input
         class="w-full rounded-none rounded-b-3xl border-0 bg-transparent px-5 py-4 text-lg focus:ring-0 dark:bg-transparent"

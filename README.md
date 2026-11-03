@@ -29,6 +29,7 @@ A small, self-hosted alternative to Splitwise for two people. No ads, no daily l
 ## Features
 
 - **Add an expense in a few taps**: amount, what it was for, who paid, and how to split it (50/50, percentage, exact amount, or "the other person owes all").
+- **Sums in the amount field**: type `12.50+8.30` or `90/3` (there are + − × ÷ keys above the keyboard) and Splitwiz works out the amount.
 - **Quick add**: the expenses you add most often show up as one-tap chips, and typing a past description fills in who paid, the split and the category from last time.
 - **One balance** on the home screen: who owes whom, and how much.
 - **See what's new**: Home tells you what the other person added, changed or commented on since you last looked ("Sam added 2 and changed 1"), with a dot on each of those rows until you tap Mark as seen.
@@ -43,7 +44,7 @@ A small, self-hosted alternative to Splitwise for two people. No ads, no daily l
 - **Coming up** on the home screen lists the repeating expenses due in the next 30 days or 3 months, with their total, so nothing arrives as a surprise.
 - **Monthly budget** shared by both of you. Stats shows this month's spending against it and where the month is heading: everyday spending is projected with a simple linear trend and the repeating expenses still due are added on their day.
 - **Categories** are yours to manage under Settings: add, rename, reorder, change the emoji, or delete. Each one can have its **own monthly limit**; Stats shows what's left and you both get a notification at 90%.
-- **Stats** for this month, last month, 3 or 12 months, this year or all time: total spent, spending per month, a breakdown by category (with who paid what in each) you can drill into, and the biggest expenses.
+- **Stats** for this month, last month, 3 or 12 months, this year or all time: total spent, spending per month with a dashed average line, a breakdown by category (with who paid what in each) you can drill into, and the biggest expenses.
 - **Category trend on every expense**: open an expense to see what you spent in its category over the last three months.
 - **Import from Splitwise**: pick a group's CSV export under Settings. Importing the same file again only adds new rows.
 - **Live sync** between both phones, **light and dark mode**, and a **CSV export** of everything.

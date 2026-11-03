@@ -25,6 +25,62 @@ export function parseAmount(input: string): number | null {
   return cents > 0 ? cents : null;
 }
 
+const OPS = /[+\-*/×÷x]/;
+
+/** True when what was typed is a sum like "12.50+8" rather than one amount. */
+export function isSum(input: string): boolean {
+  return OPS.test(input.trim().replace(/^[+-]/, ''));
+}
+
+/**
+ * Works out a sum typed in the amount field, such as "12.50+8,30" or
+ * "90/3", into cents: + − × ÷ (also * / x), each number read like
+ * parseAmount, times and divide before plus and minus. Rounded to the cent;
+ * null when it can't be read or isn't more than zero. A single amount
+ * gives the same as parseAmount.
+ */
+export function evalAmount(input: string): number | null {
+  const s = input.replace(/[€\s]/g, '').replace(/−/g, '-').replace(/[×x]/gi, '*').replace(/÷/g, '/');
+  if (!s) return null;
+  if (!isSum(s)) return parseAmount(s);
+  const tokens = s.match(/[+\-*/]|[^+\-*/]+/g) ?? [];
+  // numbers as euros (fractions allowed while working it out), ops between them
+  let terms: number[] = [];
+  let signs: number[] = [];
+  let cur: number | null = null;
+  let pendingOp: '*' | '/' | null = null;
+  let sign = 1;
+  let expectNumber = true;
+  for (const t of tokens) {
+    if (expectNumber) {
+      const cents = t === '0' ? 0 : parseAmount(t);
+      if (cents === null) return null;
+      const v = cents / 100;
+      if (pendingOp === '*') cur = cur! * v;
+      else if (pendingOp === '/') {
+        if (v === 0) return null;
+        cur = cur! / v;
+      } else cur = v;
+      pendingOp = null;
+      expectNumber = false;
+    } else {
+      if (t === '*' || t === '/') pendingOp = t;
+      else {
+        terms.push(cur!);
+        signs.push(sign);
+        sign = t === '-' ? -1 : 1;
+      }
+      expectNumber = true;
+    }
+  }
+  if (expectNumber) return null;
+  terms.push(cur!);
+  signs.push(sign);
+  const total = terms.reduce((sum, v, i) => sum + signs[i] * v, 0);
+  const cents = Math.round(total * 100 + Number.EPSILON);
+  return cents > 0 ? cents : null;
+}
+
 /** Same rules as the server's ledger.OwedCents, used for the live preview in the form. */
 export function owedCents(
   amount: number,

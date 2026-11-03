@@ -7,7 +7,8 @@
     title,
     highlight,
     height = 150,
-  }: { periods: Period[]; title: string; highlight?: number; height?: number } = $props();
+    average = false,
+  }: { periods: Period[]; title: string; highlight?: number; height?: number; average?: boolean } = $props();
 
   // bar the readout describes while pointing at it; otherwise `highlight` or the latest
   let active = $state<number | null>(null);
@@ -23,6 +24,8 @@
   const bottom = 20;
   const left = 34;
   const right = 14; // room for the last label to centre under its bar
+  // a dashed line at the mean of the periods shown
+  const mean = $derived(average && periods.length >= 2 ? Math.round(periods.reduce((s, p) => s + p.cents, 0) / periods.length) : 0);
   const ticks = $derived(niceTicks(Math.max(0, ...periods.map((p) => p.cents))));
   const yMax = $derived(ticks.at(-1) || 1);
   const band = $derived((W - left - right) / Math.max(1, periods.length));
@@ -77,4 +80,8 @@
       <text x={x + barW / 2} y={H - 5} text-anchor="middle" class="fill-slate-500 text-[10px]">{p.label}</text>
     {/if}
   {/each}
+  {#if mean > 0}
+    <line x1={left} x2={W - right} y1={y(mean)} y2={y(mean)} class="pointer-events-none stroke-slate-600 dark:stroke-slate-300" stroke-width="1.5" stroke-dasharray="4 3" />
+    <text x={W - right} y={y(mean) - 4} text-anchor="end" class="pointer-events-none fill-slate-600 text-[10px] font-medium dark:fill-slate-300">Avg {short(mean)}</text>
+  {/if}
 </svg>
