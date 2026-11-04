@@ -21,4 +21,9 @@ services:
     environment:
       - TZ=${TZ:-UTC} # your time zone, e.g. Europe/Brussels: when repeating expenses and backups run
       - SPLITWIZ_PUSH_CONTACT=${SPLITWIZ_PUSH_CONTACT:-} # optional mailto: or https: address for push services
+    # Runs as root inside the container, but with no extra privileges except
+    # writing to a data folder that belongs to another user.
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [DAC_OVERRIDE, FOWNER]
     mem_limit: 256m
