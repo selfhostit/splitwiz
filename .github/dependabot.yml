@@ -1,0 +1,6 @@
+version: 2
+updates:
+  # keeps the commit-pinned Actions in the workflows current
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }
