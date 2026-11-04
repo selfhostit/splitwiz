@@ -70,6 +70,7 @@
     {#key `${range}|${focus}`}
       <PeriodBars
         {periods}
+        average
         title={`${periods.length && periods[0].key.length === 4 ? 'Per year' : 'Per month'}${focus !== null ? ` · ${catName(focus)}` : ''}`}
       />
     {/key}

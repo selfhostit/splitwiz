@@ -1,12 +1,15 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
   import { app } from '../lib/state.svelte';
-  import { formatCents, owedCents, parseAmount } from '../lib/money';
+  import { evalAmount, formatCents, isSum, owedCents, parseAmount } from '../lib/money';
   import { dayOf, toPbDate, today, type Every, type Expense, type Recurring, type SplitMode } from '../lib/pb';
   import { hasEnded, nextDate, sameCharge } from '../lib/recurring';
   import { startSeries } from '../lib/series';
   import { favorites, lastLike, suggest } from '../lib/quickadd';
   import { isLocal } from '../lib/outbox';
+  import { addTag, recentTags } from '../lib/tags';
+  import { matchRule } from '../lib/rules';
+  import type { Rule } from '../lib/pb';
   import { byPeriod, rangeBounds } from '../lib/stats';
   import PeriodBars from './PeriodBars.svelte';
   import Comments from './Comments.svelte';
@@ -36,6 +39,8 @@
   let day = $state(initialTemplate ? dayOf(initialTemplate.next_date) : initial ? dayOf((initial as Expense).date) : today());
   let every = $state<Every | ''>(initialTemplate?.every ?? '');
   let note = $state(initial?.note ?? '');
+  let tags = $state<string[]>([...(initial?.tags ?? [])]);
+  let tagText = $state('');
   // when the series stops and how its amount changes over time
   let ends = $state(initialTemplate?.ends_on ? dayOf(initialTemplate.ends_on) : '');
   let changeRows = $state<ChangeRow[]>(
@@ -50,7 +55,21 @@
     if (!initial) amountInput?.focus();
   });
 
-  const amount = $derived(parseAmount(amountText));
+  // the amount field also works out sums like 12.50+8.30
+  const amount = $derived(evalAmount(amountText));
+  const summing = $derived(isSum(amountText));
+  let amountFocused = $state(false);
+
+  function typeOp(op: string) {
+    amountText = amountText.trimEnd().replace(/[+\-×÷]$/, '') + op;
+    amountInput?.focus();
+  }
+
+  // a worked-out sum becomes its result once the field is left
+  function onAmountBlur() {
+    amountFocused = false;
+    if (summing && amount) amountText = centsText(amount);
+  }
   const otherShare = $derived(mode === 'exact' ? (parseAmount(otherShareText) ?? (otherShareText.trim() === '0' ? 0 : NaN)) : 0);
   const owed = $derived(amount ? owedCents(amount, mode, payerPercent, otherShare) : null);
   const payerName = $derived(app.nameOf(paidBy));
@@ -123,6 +142,23 @@
     }
   }
 
+  // recent trips and events, one tap to add
+  const tagSuggestions = $derived(recentTags(app.expenses, today()).filter((t) => !tags.includes(t)));
+
+  function commitTag() {
+    tags = addTag(tags, tagText);
+    tagText = '';
+  }
+
+  function onTagKey(e: KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ',' || (e.key === ' ' && tagText.trim())) {
+      e.preventDefault();
+      commitTag();
+    } else if (e.key === 'Backspace' && !tagText && tags.length) {
+      tags = tags.slice(0, -1);
+    }
+  }
+
   const adding = !initial;
   const favs = $derived(adding ? favorites(app.expenses, today()) : []);
 
@@ -140,14 +176,33 @@
   function pick(e: Expense) {
     description = e.description;
     fill(e, true);
+    ruleUsed = matchRule(app.rules, description);
+    if (ruleUsed) applyRule(ruleUsed);
   }
 
-  // picking a past description pre-fills how it was paid and split last time
+  // a rule's settings, applied once each time a different rule matches
+  let ruleUsed = $state<Rule | undefined>();
+
+  function applyRule(r: Rule) {
+    if (r.category) category = r.category;
+    if (r.paid_by) paidBy = r.paid_by;
+    if (r.split_mode) mode = r.split_mode;
+    if (r.split_mode === 'percent') payerPercent = r.payer_percent;
+    for (const t of r.tags ?? []) tags = addTag(tags, t);
+  }
+
+  // picking a past description pre-fills how it was paid and split last
+  // time; a matching rule then has the last word
   function onDescriptionChange() {
     const past = lastLike(app.expenses, description);
-    if (!past) return;
-    if (adding) fill(past, false);
-    else if (!category) category = past.category;
+    if (past) {
+      if (adding) fill(past, false);
+      else if (!category) category = past.category;
+    }
+    if (!adding) return;
+    const rule = matchRule(app.rules, description);
+    if (rule && rule.id !== ruleUsed?.id) applyRule(rule);
+    ruleUsed = rule;
   }
 
   async function save(e: SubmitEvent) {
@@ -163,6 +218,7 @@
       payer_percent: mode === 'percent' ? payerPercent : 0,
       other_share_cents: mode === 'exact' ? otherShare : 0,
       category: category || null,
+      tags: addTag(tags, tagText),
       // an existing expense keeps its comments instead
       ...(expense ? {} : { note: note.trim() }),
     };
@@ -226,13 +282,33 @@
         <span class="text-3xl font-semibold text-slate-400">€</span>
         <input
           bind:this={amountInput}
-          class="min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 text-5xl font-bold tracking-tight focus:ring-0 dark:bg-transparent"
+          class="min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 font-bold tracking-tight focus:ring-0 dark:bg-transparent {summing ? 'text-3xl' : 'text-5xl'}"
           inputmode="decimal"
           placeholder="0.00"
           aria-label="Amount"
           bind:value={amountText}
+          onfocus={() => (amountFocused = true)}
+          onblur={onAmountBlur}
         />
       </div>
+      {#if summing || amountFocused}
+        <div class="flex items-center gap-1.5 px-5 pb-3">
+          {#each ['+', '−', '×', '÷'] as op (op)}
+            <button
+              type="button"
+              class="h-9 w-11 rounded-xl bg-white text-lg font-semibold text-slate-600 active:bg-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:active:bg-slate-700"
+              aria-label={{ '+': 'Plus', '−': 'Minus', '×': 'Times', '÷': 'Divided by' }[op]}
+              onpointerdown={(ev) => ev.preventDefault()}
+              onclick={() => typeOp(op)}>{op}</button
+            >
+          {/each}
+          {#if summing}
+            <span class="ml-auto text-sm font-medium {amount ? 'text-brand-700 dark:text-brand-100' : 'text-slate-400'}" aria-live="polite">
+              {amount ? `= ${formatCents(amount)}` : '= …'}
+            </span>
+          {/if}
+        </div>
+      {/if}
       <div class="mx-5 border-t border-slate-200 dark:border-slate-700"></div>
       <input
         class="w-full rounded-none rounded-b-3xl border-0 bg-transparent px-5 py-4 text-lg focus:ring-0 dark:bg-transparent"
@@ -246,6 +322,12 @@
         onblur={() => (descFocused = false)}
       />
     </div>
+
+    {#if ruleUsed}
+      <p class="flex items-center gap-2 px-1 text-sm text-brand-700 dark:text-brand-100">
+        <span aria-hidden="true">✨</span> Filled in by the rule for “{ruleUsed.match}”
+      </p>
+    {/if}
 
     {#if suggestions.length}
       <!-- in the page, not floating over it, so nothing below is hidden -->
@@ -408,6 +490,36 @@
         Changes here only affect this one. Edit the series under Settings.
       </p>
     {/if}
+
+    <div class="px-4 py-3">
+      <div class="flex min-h-8 flex-wrap items-center gap-2">
+        <span class="text-lg" aria-hidden="true">🏷️</span>
+        {#each tags as t (t)}
+          <span class="flex items-center gap-1 rounded-full bg-brand-50 py-1 pr-1 pl-3 text-sm font-medium text-brand-700 dark:bg-brand-700/30 dark:text-brand-100">
+            #{t}
+            <button type="button" class="flex h-6 w-6 items-center justify-center rounded-full text-base leading-none" aria-label={`Remove tag ${t}`} onclick={() => (tags = tags.filter((x) => x !== t))}>×</button>
+          </span>
+        {/each}
+        <input
+          class="min-w-24 flex-1 rounded-none border-0 bg-transparent px-0 py-1 focus:ring-0 dark:bg-transparent"
+          placeholder={tags.length ? 'Another tag' : 'Tag a trip or event (optional)'}
+          aria-label="Tag"
+          autocomplete="off"
+          autocapitalize="off"
+          maxlength="40"
+          bind:value={tagText}
+          onkeydown={onTagKey}
+          onblur={commitTag}
+        />
+      </div>
+      {#if tagSuggestions.length}
+        <div class="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]" role="group" aria-label="Recent tags">
+          {#each tagSuggestions as t (t)}
+            <button type="button" class="chip py-1.5" onclick={() => (tags = addTag(tags, t))}>+ #{t}</button>
+          {/each}
+        </div>
+      {/if}
+    </div>
 
     {#if !expense}
       <label class="row">

@@ -166,7 +166,7 @@ func addOccurrence(tx core.App, expenses *core.Collection, s *core.Record, day t
 	}
 
 	r := core.NewRecord(expenses)
-	for _, f := range []string{"description", "paid_by", "split_mode", "payer_percent", "category", "note", "created_by"} {
+	for _, f := range []string{"description", "paid_by", "split_mode", "payer_percent", "category", "note", "tags", "created_by"} {
 		r.Set(f, s.Get(f))
 	}
 	base := int64(s.GetInt("amount_cents"))

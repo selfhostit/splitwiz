@@ -3,6 +3,7 @@
   import { formatCents, parseAmount } from '../lib/money';
   import type { Expense, Settlement } from '../lib/pb';
   import { activeFilters, filterEntries, noFilters, toCsv, type Filters } from '../lib/filters';
+  import { allTags, tagsOf, tagSummary } from '../lib/tags';
   import EntryRow from './EntryRow.svelte';
 
   let { editExpense, editSettlement }: { editExpense: (e: Expense) => void; editSettlement: (s: Settlement) => void } =
@@ -27,11 +28,19 @@
   const text = (e: Entry) => {
     if (e.kind === 'settlement') return ['settlement payment', e.item.note];
     const cat = app.category(e.item.category)?.name ?? '';
-    return [e.item.description, e.item.note, cat, ...app.commentsOf(e.item.id).map((c) => c.text)];
+    return [e.item.description, e.item.note, cat, ...tagsOf(e.item).map((t) => '#' + t), ...app.commentsOf(e.item.id).map((c) => c.text)];
   };
 
   const matching = $derived(narrowed ? filterEntries(app.entries, query, filters, text) : app.entries);
   const filtered = $derived(narrowed ? matching : matching.slice(0, shown));
+  const tags = $derived(allTags(app.expenses));
+  // a tag's own totals, like a trip's bill
+  const trip = $derived(filters.tag ? tagSummary(app.expenses, filters.tag, app.me?.id ?? '') : null);
+  const span = (from: string, to: string) => {
+    const f = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    return from === to ? f(from) : `${f(from)} – ${f(to)}`;
+  };
+
   const total = $derived(matching.reduce((s, e) => s + (e.kind === 'expense' ? e.item.amount_cents : 0), 0));
 
   const months = $derived.by(() => {
@@ -108,6 +117,14 @@
           {/each}
         </div>
       {/if}
+      {#if filters.kind !== 'settlement' && tags.length}
+        <div class="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]" role="group" aria-label="Tag">
+          <button class="chip" aria-pressed={!filters.tag} onclick={() => (filters.tag = '')}>Any tag</button>
+          {#each tags as t (t)}
+            <button class="chip" aria-pressed={filters.tag === t} onclick={() => (filters.tag = t)}>#{t}</button>
+          {/each}
+        </div>
+      {/if}
       <div class="flex items-center gap-2 text-sm">
         <span class="text-slate-500">Amount €</span>
         <input class="min-w-0 flex-1 py-2" inputmode="decimal" placeholder="from" aria-label="Minimum amount" bind:value={minText} />
@@ -117,6 +134,28 @@
       {#if active}
         <button class="self-start px-1 text-sm font-medium text-brand-600" onclick={clear}>Clear filters</button>
       {/if}
+    </div>
+  {/if}
+
+  {#if trip && trip.count}
+    <div class="mt-3 rounded-2xl bg-brand-50 p-4 dark:bg-brand-700/25">
+      <div class="flex items-baseline justify-between gap-3">
+        <h2 class="truncate font-semibold">#{filters.tag}</h2>
+        <span class="text-lg font-bold">{formatCents(trip.total)}</span>
+      </div>
+      <p class="text-xs text-slate-500">{trip.count} {trip.count === 1 ? 'expense' : 'expenses'} · {span(trip.from, trip.to)}</p>
+      <ul class="mt-2 flex flex-col gap-0.5 text-sm">
+        {#each app.users as u (u.id)}
+          <li class="flex justify-between"><span>{app.nameOf(u.id)} paid</span><span>{formatCents(trip.paid[u.id] ?? 0)}</span></li>
+        {/each}
+      </ul>
+      <p class="mt-2 text-sm font-medium text-brand-700 dark:text-brand-100">
+        {trip.net === 0
+          ? 'Even for this tag.'
+          : trip.net > 0
+            ? `For this tag, ${app.nameOf(app.other?.id ?? '')} owes you ${formatCents(trip.net)}.`
+            : `For this tag, you owe ${app.nameOf(app.other?.id ?? '')} ${formatCents(-trip.net)}.`}
+      </p>
     </div>
   {/if}
 

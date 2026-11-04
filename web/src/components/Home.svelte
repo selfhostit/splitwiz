@@ -2,6 +2,7 @@
   import { app } from '../lib/state.svelte';
   import { formatCents } from '../lib/money';
   import type { Expense, Recurring, Settlement } from '../lib/pb';
+  import { describeUnseen } from '../lib/unseen';
   import EntryRow from './EntryRow.svelte';
   import Upcoming from './Upcoming.svelte';
 
@@ -25,6 +26,7 @@
   const settled = $derived(!balance || balance.amount_cents === 0);
   const iOwe = $derived(balance?.debtor === app.me?.id);
   const recent = $derived(app.entries.slice(0, 15));
+  const news = $derived(describeUnseen(app.nameOf(app.other?.id ?? ''), app.unseen));
 </script>
 
 <header class="px-5 pt-6 pb-2">
@@ -59,6 +61,14 @@
   </button>
   <button class="btn-secondary" onclick={settle} disabled={settled}>Settle up</button>
 </div>
+
+{#if news}
+  <div class="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-brand-600/30 bg-brand-50 px-4 py-3 dark:bg-brand-700/25">
+    <span class="h-2.5 w-2.5 shrink-0 rounded-full bg-brand-500" aria-hidden="true"></span>
+    <p class="min-w-0 flex-1 text-sm">{news}.</p>
+    <button class="shrink-0 text-sm font-semibold text-brand-700 dark:text-brand-100" onclick={() => app.markSeen()}>Mark as seen</button>
+  </div>
+{/if}
 
 <Upcoming {editRecurring} />
 

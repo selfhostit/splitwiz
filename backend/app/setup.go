@@ -7,6 +7,7 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 // First-run setup: until the two people exist, the web app shows a setup
@@ -92,6 +93,7 @@ func createPeople(tx core.App, people []setupPerson) error {
 		r.SetEmail(p.Email)
 		r.SetPassword(p.Password)
 		r.SetVerified(true)
+		r.Set("seen_at", types.NowDateTime())
 		if err := tx.Save(r); err != nil {
 			return err
 		}

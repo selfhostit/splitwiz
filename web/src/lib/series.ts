@@ -21,6 +21,7 @@ export async function startSeries(
     other_share_cents: from.other_share_cents,
     category: from.category || null,
     note: from.note,
+    tags: from.tags ?? [],
     every,
     next_date: toPbDate(nextDate(dayOf(from.date), every)),
     ...plan,

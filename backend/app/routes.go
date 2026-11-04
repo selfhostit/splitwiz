@@ -9,6 +9,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/types"
 
 	"github.com/selfhostit/splitwiz/ledger"
 )
@@ -43,6 +44,20 @@ func registerRoutes(se *core.ServeEvent) {
 	})
 
 	g.POST("/import/splitwise", importSplitwise)
+	g.POST("/import/bank", importBank)
+
+	// everything up to now counts as seen by the signed-in person
+	g.POST("/seen", func(e *core.RequestEvent) error {
+		u, err := e.App.FindRecordById("users", e.Auth.Id)
+		if err != nil {
+			return e.NotFoundError("", err)
+		}
+		u.Set("seen_at", types.NowDateTime())
+		if err := e.App.SaveNoValidate(u); err != nil {
+			return e.InternalServerError("", err)
+		}
+		return e.JSON(http.StatusOK, map[string]any{"seen_at": u.GetDateTime("seen_at")})
+	})
 
 	registerPushRoutes(g)
 }
@@ -149,7 +164,7 @@ func exportCSV(e *core.RequestEvent) error {
 	e.Response.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
 
 	w := csv.NewWriter(e.Response)
-	_ = w.Write([]string{"type", "date", "description", "category", "amount", "paid_by", "split_mode", "owed_by_other", "note"})
+	_ = w.Write([]string{"type", "date", "description", "category", "amount", "paid_by", "split_mode", "owed_by_other", "note", "tags"})
 
 	money := func(cents int) string {
 		return strconv.FormatFloat(float64(cents)/100, 'f', 2, 64)
@@ -163,12 +178,13 @@ func exportCSV(e *core.RequestEvent) error {
 			"expense", day(r), r.GetString("description"), catNames[r.GetString("category")],
 			money(r.GetInt("amount_cents")), names[r.GetString("paid_by")], r.GetString("split_mode"),
 			money(r.GetInt("owed_cents")), strings.Join(append(nonEmpty(r.GetString("note")), notes[r.Id]...), " | "),
+			strings.Join(recordTags(r), " "),
 		})
 	}
 	for _, r := range settlements {
 		_ = w.Write([]string{
 			"settlement", day(r), names[r.GetString("from_user")] + " paid " + names[r.GetString("to_user")], "",
-			money(r.GetInt("amount_cents")), names[r.GetString("from_user")], "", "", r.GetString("note"),
+			money(r.GetInt("amount_cents")), names[r.GetString("from_user")], "", "", r.GetString("note"), "",
 		})
 	}
 
@@ -181,4 +197,14 @@ func nonEmpty(s string) []string {
 		return nil
 	}
 	return []string{s}
+}
+
+// recordTags reads an expense's tags, each with its "#" for the CSV.
+func recordTags(r *core.Record) []string {
+	var tags []string
+	_ = r.UnmarshalJSONField("tags", &tags)
+	for i, t := range tags {
+		tags[i] = "#" + t
+	}
+	return tags
 }

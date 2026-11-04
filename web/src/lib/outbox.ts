@@ -4,7 +4,7 @@
 
 import { owedCents } from './money';
 
-export type Collection = 'expenses' | 'settlements' | 'recurring_expenses' | 'expense_comments' | 'categories';
+export type Collection = 'expenses' | 'settlements' | 'recurring_expenses' | 'expense_comments' | 'categories' | 'rules';
 
 export type Op = {
   collection: Collection;
@@ -75,6 +75,7 @@ const defaults: Record<Collection, Record<string, unknown>> = {
   recurring_expenses: { note: '', category: '', payer_percent: 0, other_share_cents: 0, paused: false, anchor_day: 0, ends_on: '', changes: [] },
   expense_comments: {},
   categories: { emoji: '', sort: 0, monthly_cents: 0 },
+  rules: { category: '', paid_by: '', split_mode: '', payer_percent: 0, tags: [] },
 };
 
 // fields the server would fill in on save

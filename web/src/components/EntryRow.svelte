@@ -97,6 +97,10 @@
     onpointerup={up}
     onpointercancel={up}
   >
+    {#if app.unseen.has(entry.item.id)}
+      <span class="absolute top-1/2 left-1.5 h-2 w-2 -translate-y-1/2 rounded-full bg-brand-500" title={`New: ${app.unseen.get(entry.item.id)}`}></span>
+      <span class="sr-only">New, {app.unseen.get(entry.item.id)}.</span>
+    {/if}
     {#if entry.kind === 'expense'}
       {@const e = entry.item}
       {@const mine = e.paid_by === app.me?.id}
@@ -111,6 +115,9 @@
             ? ` · 💬 ${comments}`
             : ''}
         </span>
+        {#if e.tags?.length}
+          <span class="block truncate text-xs font-medium text-brand-700 dark:text-brand-100">{e.tags.map((t) => '#' + t).join(' ')}</span>
+        {/if}
       </span>
       <span class="shrink-0 text-right">
         {#if e.owed_cents === 0}
