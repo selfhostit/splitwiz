@@ -25,8 +25,10 @@ type summary struct {
 	Net     map[string]int64 `json:"net"`
 }
 
-func registerRoutes(se *core.ServeEvent) {
-	registerSetupRoutes(se)
+func registerRoutes(se *core.ServeEvent) error {
+	if err := registerSetupRoutes(se); err != nil {
+		return err
+	}
 
 	g := se.Router.Group("/api/splitwiz")
 	g.Bind(apis.RequireAuth("users"))
@@ -60,6 +62,7 @@ func registerRoutes(se *core.ServeEvent) {
 	})
 
 	registerPushRoutes(g)
+	return nil
 }
 
 func loadUsers(app core.App) ([]*core.Record, error) {

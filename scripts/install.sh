@@ -177,6 +177,12 @@ else
 	say "To try it first from another computer:  ssh -L $SPLITWIZ_PORT:127.0.0.1:$SPLITWIZ_PORT $(id -un)@$lan_ip"
 	say "and then open http://localhost:$SPLITWIZ_PORT"
 fi
+# Splitwiz makes a one-time code for the setup screen, until the two people exist.
+code=$($DOCKER exec splitwiz cat /app/pb_data/setup_code 2> /dev/null || true)
+if [ -n "$code" ]; then
+	say ""
+	say "Setup code: $code   (the setup screen asks for it)"
+fi
 say ""
 say "Phones need an HTTPS address to install the app and get notifications:"
 say "https://github.com/selfhostit/splitwiz#using-it-from-your-phones"

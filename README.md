@@ -85,7 +85,7 @@ docker compose up -d
 
 Then open Splitwiz (`http://localhost:8090` on the same machine) and **add the two people on the setup screen**. The first person also becomes the admin for the admin page at `/_/`. That's the whole setup: there are no sign-ups, so these are the only two accounts.
 
-The setup screen is open to whoever reaches it first, so finish it before you make Splitwiz reachable from the internet. By default it only listens on the machine itself.
+The setup screen asks for a one-time setup code, so nobody who stumbles on a fresh install can add themselves. The installer shows the code, and Splitwiz prints it to its log (`docker logs splitwiz`) until setup is done.
 
 <details>
 <summary>Prefer plain <code>docker run</code>?</summary>

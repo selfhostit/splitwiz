@@ -58,7 +58,9 @@ func Register(app core.App) {
 	})
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		registerRoutes(se)
+		if err := registerRoutes(se); err != nil {
+			return err
+		}
 		return se.Next()
 	})
 }
