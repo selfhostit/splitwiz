@@ -108,7 +108,7 @@ All optional, in `.env` next to `docker-compose.yml` (the installer writes it fo
 | `SPLITWIZ_LISTEN` | `127.0.0.1` | `127.0.0.1`: only this machine and a reverse proxy on it can connect. `0.0.0.0`: every device on your network can; on a VPS or cloud server that means the whole internet, over plain http, because Docker opens the port even when a firewall such as ufw blocks it. |
 | `SPLITWIZ_PORT` | `8090` | The port on this machine. |
 | `SPLITWIZ_DATA` | `./pb_data` | Where the database, backups and push key live. |
-| `SPLITWIZ_VERSION` | `latest` | Image tag; a commit SHA pins one build. |
+| `SPLITWIZ_VERSION` | `latest` | Image tag: `latest` is the newest release, `1` every 1.x, `1.2.0` one release, `edge` follows `main`, and a commit SHA pins one build. |
 | `SPLITWIZ_PUSH_CONTACT` | | Optional `mailto:` or `https:` address push services can contact. |
 
 ## Using it from your phones
@@ -147,7 +147,21 @@ Run the installer again, or:
 docker compose pull && docker compose up -d
 ```
 
-Every push to `main` publishes a new `latest` image. Your data and settings stay in `pb_data` and `.env`, and database migrations run on start.
+Updates bring the newest release: a release tag publishes `latest`, and what changed is in
+[CHANGELOG.md](CHANGELOG.md). Every push to `main` publishes `edge`, if you'd like to follow
+it (`SPLITWIZ_VERSION=edge`). Your data and settings stay in `pb_data` and `.env`, and
+database migrations run on start.
+
+Every image has a signed attestation of the workflow and commit that built it. Check one with
+the [GitHub CLI](https://cli.github.com):
+
+```sh
+gh attestation verify oci://ghcr.io/selfhostit/splitwiz:latest --repo selfhostit/splitwiz
+```
+
+To release: add the changes under a new version in `CHANGELOG.md` and `web/package.json`,
+merge, then publish a GitHub release tagged `vX.Y.Z` with the changelog entry as its notes.
+CI tests it, publishes the image and attests it.
 
 ## Backups
 
@@ -190,6 +204,27 @@ npm run dev               # proxies /api to :8090
 Tests: `cd backend && go test ./...` and `cd web && npm test && npm run check`.
 
 `scripts/deploy-to-nas.sh user@host` builds the image on your computer and replaces the running container on a NAS over SSH (in `/volume1/docker/splitwiz`, or `SPLITWIZ_DIR`), for when you want to try a change before pushing it.
+
+## Security and maintenance
+
+- **Not on the internet:** the container listens on `127.0.0.1` only, and the installer warns
+  when this machine has a public IP address. Reach it through Tailscale or your own reverse
+  proxy with HTTPS.
+- **Locked-down container:** it drops every Linux capability and can't gain new ones.
+- **Nobody claims a new install before you:** the first account needs the one-time setup
+  code the install prints (`backend/app/setup.go`).
+- **Sign-ins are rate limited,** and the web app sends a Content Security Policy
+  (`backend/app/headers.go`).
+- **Tested on every change:** Go and web tests (balances, splits, CSV and Splitwise import)
+  in [CI](.github/workflows/ci.yml), with Actions pinned to commit hashes.
+- **Versioned releases:** installs update to a release, not to every change on `main`, and
+  every image has a signed attestation of the commit that built it ([Updating](#updating)).
+- **No analytics or tracking.** The data stays in `pb_data` on your machine; export all of it
+  as CSV from Settings.
+
+Found a security problem? Please write to kalfasyan@pm.me rather than opening an issue
+([security policy](https://github.com/selfhostit/.github/blob/main/SECURITY.md)). [Security and privacy](https://github.com/selfhostit/docs/blob/main/security.md) covers every selfhostit app:
+what protects an install, what you are trusting and what is not done yet.
 
 ## Contributing
 
