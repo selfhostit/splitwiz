@@ -66,6 +66,22 @@ else
 	COMPOSE=
 fi
 
+# public_ip: prints this machine's first public IPv4 address, if it has one,
+# as a VPS or cloud server does. Home networks use private ones (10.x, 192.168.x,
+# 172.16-31.x), and Tailscale and carrier-grade NAT use 100.64-127.x.
+public_ip() {
+	{ hostname -I 2> /dev/null || ip -4 -o addr show scope global 2> /dev/null | awk '{sub("/.*", "", $4); print $4}'; } |
+		tr ' ' '\n' | while read -r a; do
+		case $a in
+			'' | *:* | 10.* | 127.* | 192.168.* | 169.254.*) ;;
+			172.1[6-9].* | 172.2[0-9].* | 172.3[01].*) ;;
+			100.6[4-9].* | 100.[7-9][0-9].* | 100.1[01][0-9].* | 100.12[0-7].*) ;;
+			*) echo "$a" && break ;;
+		esac
+	done
+}
+PUBLIC_IP=$(public_ip)
+
 # --- Questions --------------------------------------------------------------
 
 if [ -n "$SPLITWIZ_DIR" ]; then
@@ -102,13 +118,24 @@ else
 	say "Who should be able to connect?"
 	say "  1) Only this machine. Pick this if you will put a reverse proxy with HTTPS in front"
 	say "     (the NAS's own reverse proxy, Caddy, Nginx Proxy Manager, Traefik, a tunnel)."
-	say "  2) Every device on your network, over plain http://. Easiest to try out, but phones"
+	say "  2) Every device on your home network, over plain http://. Easiest to try out, but phones"
 	say "     need HTTPS to install the app and get notifications."
+	if [ -n "$PUBLIC_IP" ]; then
+		say ""
+		say "This machine has a public address ($PUBLIC_IP), like a VPS or cloud server. Here option 2"
+		say "puts Splitwiz on the internet over plain http://, and Docker opens the port even if a"
+		say "firewall such as ufw blocks it. Pick 1 and use Tailscale or a reverse proxy with HTTPS."
+	fi
 	case ${SPLITWIZ_LISTEN:-127.0.0.1} in 0.0.0.0) d=2 ;; *) d=1 ;; esac
 	case $(ask "Choose 1 or 2" "$d") in
 		2) SPLITWIZ_LISTEN=0.0.0.0 ;;
 		*) SPLITWIZ_LISTEN=127.0.0.1 ;;
 	esac
+	if [ "$SPLITWIZ_LISTEN" = 0.0.0.0 ] && [ -n "$PUBLIC_IP" ] &&
+		[ "$(ask "Type yes to really open Splitwiz to the internet" no)" != yes ]; then
+		say "Keeping it to this machine only."
+		SPLITWIZ_LISTEN=127.0.0.1
+	fi
 	SPLITWIZ_PORT=$(ask "Port" "${SPLITWIZ_PORT:-8090}")
 
 	cat > .env <<-EOF
@@ -147,6 +174,7 @@ else
 	$DOCKER rm -f splitwiz > /dev/null 2>&1 || true
 	case $SPLITWIZ_DATA in /*) data=$SPLITWIZ_DATA ;; *) data=$PWD/${SPLITWIZ_DATA#./} ;; esac
 	$DOCKER run -d --name splitwiz --restart always --memory 256m \
+		--security-opt no-new-privileges:true --cap-drop ALL --cap-add DAC_OVERRIDE --cap-add FOWNER \
 		-p "$SPLITWIZ_LISTEN:$SPLITWIZ_PORT:8090" -v "$data:/app/pb_data" \
 		-e "TZ=$TZ" -e "SPLITWIZ_PUSH_CONTACT=${SPLITWIZ_PUSH_CONTACT:-}" \
 		"$IMAGE:${SPLITWIZ_VERSION:-latest}" > /dev/null
@@ -165,6 +193,12 @@ lan_ip=$(hostname -I 2> /dev/null | awk '{print $1}')
 [ -z "$lan_ip" ] && lan_ip=$(ip route get 1.1.1.1 2> /dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p')
 [ -z "$lan_ip" ] && lan_ip="<this-machine's-address>"
 
+if [ "$SPLITWIZ_LISTEN" = 0.0.0.0 ] && [ -n "$PUBLIC_IP" ]; then
+	say ""
+	say "Warning: Splitwiz listens on every address of this machine, which has a public one"
+	say "($PUBLIC_IP), so anyone on the internet can reach it over plain http://, firewall or not."
+	say "Set SPLITWIZ_LISTEN=127.0.0.1 in $DIR/.env and run this installer again to close it."
+fi
 say ""
 say "Splitwiz is running, with its data in $DIR."
 say ""

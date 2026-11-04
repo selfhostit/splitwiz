@@ -10,6 +10,8 @@ Replace `<your-name>` with whatever hostname you pick in step 4.
 
 Install **Container Manager** from Package Center if it is not there yet. It usually creates a `docker` shared folder.
 
+Keep that folder private: it will hold the database, its backups and the setup code, and anyone who can open it over the network can copy them. In Control Panel > Shared Folder, select `docker` > **Edit**: on **Permissions**, give *administrators* Read/Write and every other user and group No access; on **General**, tick *Hide this shared folder in "My Network Places"*. Don't sync it with Synology Drive or Cloud Sync.
+
 ## 2. Create the data folder
 
 In File Station, create `docker/splitwiz/pb_data`. This is where the database and its backups live.
@@ -67,4 +69,4 @@ Working on Splitwiz yourself? `scripts/deploy-to-nas.sh you@your-nas-address` bu
 
 ## Backups
 
-Splitwiz keeps 7 nightly backups in `pb_data/backups`. To also keep a copy off the NAS, add `/volume1/docker/splitwiz` to a **Hyper Backup** task.
+Splitwiz keeps 7 nightly backups in `pb_data/backups`. To also keep a copy off the NAS, add `/volume1/docker/splitwiz` to a **Hyper Backup** task with **client-side encryption** turned on, since it holds your spending history.
