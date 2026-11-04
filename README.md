@@ -191,6 +191,25 @@ Tests: `cd backend && go test ./...` and `cd web && npm test && npm run check`.
 
 `scripts/deploy-to-nas.sh user@host` builds the image on your computer and replaces the running container on a NAS over SSH (in `/volume1/docker/splitwiz`, or `SPLITWIZ_DIR`), for when you want to try a change before pushing it.
 
+## Security and maintenance
+
+- **Not on the internet:** the container listens on `127.0.0.1` only, and the installer warns
+  when this machine has a public IP address. Reach it through Tailscale or your own reverse
+  proxy with HTTPS.
+- **Locked-down container:** it drops every Linux capability and can't gain new ones.
+- **Nobody claims a new install before you:** the first account needs the one-time setup
+  code the install prints (`backend/app/setup.go`).
+- **Sign-ins are rate limited,** and the web app sends a Content Security Policy
+  (`backend/app/headers.go`).
+- **Tested on every change:** Go and web tests (balances, splits, CSV and Splitwise import)
+  in [CI](.github/workflows/ci.yml), with Actions pinned to commit hashes.
+- **No analytics or tracking.** The data stays in `pb_data` on your machine; export all of it
+  as CSV from Settings.
+
+Found a security problem? Please write to kalfasyan@pm.me rather than opening an issue
+([security policy](https://github.com/selfhostit/.github/blob/main/SECURITY.md)). [Security and privacy](https://github.com/selfhostit/docs/blob/main/security.md) covers every selfhostit app:
+what protects an install, what you are trusting and what is not done yet.
+
 ## Contributing
 
 Issues and pull requests are welcome. Please run the tests above before opening a pull request; CI runs the same checks.
