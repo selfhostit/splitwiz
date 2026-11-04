@@ -1,6 +1,7 @@
 package app
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -78,5 +79,26 @@ func TestCreatePeopleKeepsExistingAdmin(t *testing.T) {
 	}
 	if n, _ := app.CountRecords(core.CollectionNameSuperusers); n != 1 {
 		t.Fatalf("want the one existing admin, got %d", n)
+	}
+}
+
+func TestSetupCode(t *testing.T) {
+	app := newTestApp(t)
+	code, err := setupCode(app)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(code) != 9 || code[4] != '-' {
+		t.Fatalf("setup code = %q", code)
+	}
+	if again, _ := setupCode(app); again != code {
+		t.Errorf("the code changed from %q to %q", code, again)
+	}
+	lower := strings.ToLower(strings.Replace(code, "-", " ", 1))
+	if !sameSetupCode(lower, code) {
+		t.Errorf("%q should match %q", lower, code)
+	}
+	if sameSetupCode("", code) || sameSetupCode(code[:8], code) {
+		t.Error("a missing or short code matched")
 	}
 }

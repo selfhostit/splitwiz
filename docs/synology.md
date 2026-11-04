@@ -51,7 +51,7 @@ Only want to use Splitwiz at home or over a VPN? Skip this step and the DDNS ste
 
 ## 8. Add the two people
 
-Open `https://<your-name>.synology.me`. On the setup screen, fill in a name, email and password for each of you. The first person can also sign in to the admin page at `/_/`.
+Open `https://<your-name>.synology.me`. The setup screen first asks for a one-time setup code: in Container Manager, open the **splitwiz** container, then **Log**, and copy the code from the line "First-run setup code". Then fill in a name, email and password for each of you. The first person can also sign in to the admin page at `/_/`.
 
 ## 9. Install it on the phones
 

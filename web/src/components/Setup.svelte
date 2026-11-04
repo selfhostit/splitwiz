@@ -6,6 +6,7 @@
     { name: '', email: '', password: '' },
     { name: '', email: '', password: '' },
   ]);
+  let code = $state('');
   let busy = $state(false);
   let error = $state('');
 
@@ -17,7 +18,7 @@
     busy = true;
     error = '';
     try {
-      await pb.send('/api/splitwiz/setup', { method: 'POST', body: { people } });
+      await pb.send('/api/splitwiz/setup', { method: 'POST', body: { people, code } });
       await app.login(people[0].email.trim().toLowerCase(), people[0].password);
     } catch (err) {
       error = (err as { response?: { message?: string } }).response?.message || 'Could not save. Please try again.';
@@ -32,6 +33,21 @@
   <h1 class="mb-1 text-center text-3xl font-bold">Welcome to Splitwiz</h1>
   <p class="mb-8 text-center text-slate-500">Add the two people who share costs. You can change names later.</p>
   <form class="flex flex-col gap-6" onsubmit={submit}>
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-2 font-semibold">Setup code</legend>
+      <input
+        placeholder="ABCD-EF23"
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+        bind:value={code}
+        required
+      />
+      <p class="text-sm text-slate-500">
+        The installer showed it. It's also in Splitwiz's log: <code>docker logs splitwiz</code>, or the container's log in
+        your NAS's Docker app.
+      </p>
+    </fieldset>
     {#each people as p, i (i)}
       <fieldset class="flex flex-col gap-3">
         <legend class="mb-2 font-semibold">{i === 0 ? 'You' : 'The other person'}</legend>

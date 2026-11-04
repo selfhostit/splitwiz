@@ -9,7 +9,7 @@ Splitwiz is not an app from the App Store. It's a small program that runs on **a
 You need:
 
 - **A computer that can stay on all the time**: a Windows PC, a Mac, or a Linux computer such as a Raspberry Pi. If it goes to sleep, Splitwiz stops until it wakes up, so turn sleep off in its power settings. An old laptop that stays plugged in, or a Raspberry Pi 3 or newer running the 64-bit Raspberry Pi OS, is perfect.
-- **About 30 minutes.** Do it in one sitting: until the two of you are added in step 4, whoever opens Splitwiz first gets to set it up.
+- **About 30 minutes.** You can take breaks: the setup in step 4 needs a code that only this computer shows, so nobody else can set Splitwiz up for you.
 
 It's free, apart from the electricity.
 
@@ -80,7 +80,9 @@ When it says **Splitwiz is running**, continue with step 4.
 
 ## 4. Add the two of you
 
-On the same computer, open [http://localhost:8090](http://localhost:8090) in your browser. You'll see a setup screen: fill in a name, email address and password (at least 8 characters) for each of you. These are the only two accounts Splitwiz will ever have.
+On the same computer, open [http://localhost:8090](http://localhost:8090) in your browser. You'll see a setup screen: type the **setup code**, then fill in a name, email address and password (at least 8 characters) for each of you. These are the only two accounts Splitwiz will ever have.
+
+The setup code keeps anyone else from setting Splitwiz up before you. On Linux, the installer showed it at the end. On Windows or Mac, open the `Splitwiz` folder in your user folder and open the file `setup_code` (with Notepad or TextEdit), or paste `docker logs splitwiz` into the command window.
 
 No web browser on that computer, for example a Raspberry Pi without a desktop? Do step 5 first, then open its `https://` address on your phone and add the two of you there.
 
