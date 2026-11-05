@@ -39,13 +39,13 @@ Copy the line for your computer, change `Europe/Brussels` to your own time zone 
 **Windows:**
 
 ```
-docker run -d --name splitwiz --restart always -p 127.0.0.1:8090:8090 -v "$HOME\Splitwiz:/app/pb_data" -e TZ=Europe/Brussels ghcr.io/selfhostit/splitwiz:latest
+docker run -d --name splitwiz --restart always -p 127.0.0.1:8090:8090 -v "$HOME\Splitwiz:/app/pb_data" -e TZ=Europe/Brussels ghcr.io/selfhostit/splitwiz:1
 ```
 
 **Mac:**
 
 ```
-docker run -d --name splitwiz --restart always -p 127.0.0.1:8090:8090 -v "$HOME/Splitwiz:/app/pb_data" -e TZ=Europe/Brussels ghcr.io/selfhostit/splitwiz:latest
+docker run -d --name splitwiz --restart always -p 127.0.0.1:8090:8090 -v "$HOME/Splitwiz:/app/pb_data" -e TZ=Europe/Brussels ghcr.io/selfhostit/splitwiz:1
 ```
 
 It downloads Splitwiz and starts it; when it prints a long line of letters and numbers, it's running. Your data is kept in a new `Splitwiz` folder inside your user folder (the one with your name). Don't delete it.
@@ -148,7 +148,7 @@ That's it. Enjoy not arguing about money.
 **Windows or Mac:** open a command window (step 2), paste this line and press Enter. It downloads the newest Splitwiz and removes the old one:
 
 ```
-docker pull ghcr.io/selfhostit/splitwiz:latest; docker rm -f splitwiz
+docker pull ghcr.io/selfhostit/splitwiz:1; docker rm -f splitwiz
 ```
 
 Then paste your line from step 3 again. Your data is in the `Splitwiz` folder, so nothing is lost.
