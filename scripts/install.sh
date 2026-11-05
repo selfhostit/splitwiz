@@ -6,8 +6,9 @@
 #   curl -fsSL https://raw.githubusercontent.com/selfhostit/splitwiz/main/scripts/install.sh | sh
 #
 # It asks a few questions (Enter keeps the default), writes docker-compose.yml
-# and .env into the install folder, and starts Splitwiz. Run it again to
-# update; your answers in .env are kept.
+# and .env into the install folder, and starts Splitwiz. It suggests port 8090,
+# or the next free one when another app has it. Run it again to update; your
+# answers in .env, the port too, are kept.
 #
 # Without a terminal, or with SPLITWIZ_YES=1, it uses the defaults and these
 # variables if set: SPLITWIZ_DIR, TZ, SPLITWIZ_LISTEN, SPLITWIZ_PORT.
@@ -65,6 +66,28 @@ elif command -v docker-compose > /dev/null 2>&1; then
 else
 	COMPOSE=
 fi
+
+# taken_ports: the TCP ports that something on this machine listens on, and the
+# ones Docker containers publish (stopped ones too, so they can start again)
+taken_ports() {
+	{ ss -ltn 2>/dev/null || netstat -an 2>/dev/null | awk '/^tcp/ && /LISTEN/'; } |
+		awk '{print $4}' | sed -n 's/.*[:.]\([0-9][0-9]*\)$/\1/p'
+	ids=$($DOCKER ps -aq 2>/dev/null) || ids=
+	# shellcheck disable=SC2086 # one argument per container
+	[ -z "$ids" ] || $DOCKER inspect --format \
+		'{{range .HostConfig.PortBindings}}{{range .}}{{.HostPort}} {{end}}{{end}}' $ids 2>/dev/null |
+		tr ' ' '\n'
+}
+
+# free_port PORT: PORT if nothing uses it, else the first free port after it
+free_port() {
+	taken=" $(taken_ports | tr '\n' ' ') "
+	p=$1
+	while :; do
+		case $taken in *" $p "*) p=$((p + 1)) ;; *) break ;; esac
+	done
+	echo "$p"
+}
 
 # public_ip: prints this machine's first public IPv4 address, if it has one,
 # as a VPS or cloud server does. Home networks use private ones (10.x, 192.168.x,
@@ -136,7 +159,12 @@ else
 		say "Keeping it to this machine only."
 		SPLITWIZ_LISTEN=127.0.0.1
 	fi
-	SPLITWIZ_PORT=$(ask "Port" "${SPLITWIZ_PORT:-8090}")
+	# Apps on one machine each need a port of their own: suggest 8090 (or
+	# SPLITWIZ_PORT), or the next free one when something has it.
+	want=${SPLITWIZ_PORT:-8090}
+	port=$(free_port "$want")
+	[ "$port" = "$want" ] || say "Port $want is taken, so Splitwiz gets port $port."
+	SPLITWIZ_PORT=$(ask "Port" "$port")
 
 	cat > .env <<-EOF
 		# Splitwiz settings; see https://github.com/selfhostit/splitwiz/blob/main/.env.example

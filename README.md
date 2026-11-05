@@ -106,7 +106,7 @@ All optional, in `.env` next to `docker-compose.yml` (the installer writes it fo
 | --- | --- | --- |
 | `TZ` | `UTC` | Your time zone, e.g. `Europe/Brussels`. Decides when repeating expenses are added and when the nightly backup runs. |
 | `SPLITWIZ_LISTEN` | `127.0.0.1` | `127.0.0.1`: only this machine and a reverse proxy on it can connect. `0.0.0.0`: every device on your network can; on a VPS or cloud server that means the whole internet, over plain http, because Docker opens the port even when a firewall such as ufw blocks it. |
-| `SPLITWIZ_PORT` | `8090` | The port on this machine. |
+| `SPLITWIZ_PORT` | `8090` | The port on this machine. On a new install the installer takes the next free one if another app has 8090. |
 | `SPLITWIZ_DATA` | `./pb_data` | Where the database, backups and push key live. |
 | `SPLITWIZ_VERSION` | `latest` | Image tag: `latest` is the newest release, `1` every 1.x, `1.2.0` one release, `edge` follows `main`, and a commit SHA pins one build. |
 | `SPLITWIZ_PUSH_CONTACT` | | Optional `mailto:` or `https:` address push services can contact. |
