@@ -74,7 +74,7 @@ In the same terminal, paste this line and press Enter:
 curl -fsSL https://raw.githubusercontent.com/selfhostit/splitwiz/main/scripts/install.sh | sh
 ```
 
-It asks four questions. Press Enter for each one to keep the suggested answer: it keeps your data in a `splitwiz` folder in your home folder, uses this computer's time zone, lets only this computer connect (Tailscale in step 5 takes care of your phones), and uses port 8090.
+It asks four questions. Press Enter for each one to keep the suggested answer: it keeps your data in a `splitwiz` folder in your home folder, uses this computer's time zone, lets only this computer connect (Tailscale in step 5 takes care of your phones), and uses port 8090. If another app already has 8090, it suggests the next free port instead and says so: then use that number wherever this guide says 8090.
 
 When it says **Splitwiz is running**, continue with step 4.
 
