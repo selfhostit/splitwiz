@@ -50,16 +50,23 @@ jobs:
         with:
           category: /language:${{ matrix.language }}
 
-  # Known vulnerabilities (with a fix available) in the Go and npm dependencies, and,
-  # after a push or on Monday, in the released image.
+  # Known vulnerabilities: in the Go code (only what the app can reach, so not development
+  # tools), in the web dependencies (high or critical ones with a fix), and, after a
+  # push or on Monday, in the released image.
   vulnerabilities:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Scan the dependencies
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: backend/go.mod
+      - name: Scan the Go code
+        working-directory: backend
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+      - name: Scan the dependencies of the web app
         uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
         with:
-          path: .
+          path: web
           fail-build: true
           severity-cutoff: high
           only-fixed: true
