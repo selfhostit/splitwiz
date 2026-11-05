@@ -93,7 +93,9 @@ The setup screen asks for a one-time setup code, so nobody who stumbles on a fre
 ```sh
 docker run -d --name splitwiz --restart always \
   -p 127.0.0.1:8090:8090 -v "$PWD/pb_data:/app/pb_data" -e TZ=Europe/Brussels \
-  ghcr.io/selfhostit/splitwiz:latest
+  --read-only --tmpfs /tmp --security-opt no-new-privileges:true --cap-drop ALL \
+  --cap-add CHOWN --cap-add DAC_OVERRIDE --cap-add SETGID --cap-add SETUID \
+  ghcr.io/selfhostit/splitwiz:1
 ```
 
 </details>
@@ -108,7 +110,8 @@ All optional, in `.env` next to `docker-compose.yml` (the installer writes it fo
 | `SPLITWIZ_LISTEN` | `127.0.0.1` | `127.0.0.1`: only this machine and a reverse proxy on it can connect. `0.0.0.0`: every device on your network can; on a VPS or cloud server that means the whole internet, over plain http, because Docker opens the port even when a firewall such as ufw blocks it. |
 | `SPLITWIZ_PORT` | `8090` | The port on this machine. On a new install the installer takes the next free one if another app has 8090. |
 | `SPLITWIZ_DATA` | `./pb_data` | Where the database, backups and push key live. |
-| `SPLITWIZ_VERSION` | `latest` | Image tag: `latest` is the newest release, `1` every 1.x, `1.2.0` one release, `edge` follows `main`, and a commit SHA pins one build. |
+| `SPLITWIZ_VERSION` | `1` | Image tag: `1` is every 1.x release, `1.2.0` one release, `latest` the newest release even across major versions, `edge` follows `main`, and a commit SHA pins one build. |
+| `PUID`, `PGID` | `1000` | The user and group Splitwiz runs as; it gives the data folder to them when it starts. On a NAS, use the IDs of the user who should own the folder. |
 | `SPLITWIZ_PUSH_CONTACT` | | Optional `mailto:` or `https:` address push services can contact. |
 
 ## Using it from your phones
@@ -147,8 +150,9 @@ Run the installer again, or:
 docker compose pull && docker compose up -d
 ```
 
-Updates bring the newest release: a release tag publishes `latest`, and what changed is in
-[CHANGELOG.md](CHANGELOG.md). Every push to `main` publishes `edge`, if you'd like to follow
+Updates bring the newest 1.x release, and what changed is in [CHANGELOG.md](CHANGELOG.md).
+Running the installer again also refreshes the compose file from the newest release (or
+from `SPLITWIZ_REF`, a tag or branch), not from `main`. Every push to `main` publishes `edge`, if you'd like to follow
 it (`SPLITWIZ_VERSION=edge`). Your data and settings stay in `pb_data` and `.env`, and
 database migrations run on start.
 
@@ -161,6 +165,8 @@ gh attestation verify oci://ghcr.io/selfhostit/splitwiz:latest --repo selfhostit
 
 To release: add the changes under a new version in `CHANGELOG.md` and `web/package.json`,
 merge, then publish a GitHub release tagged `vX.Y.Z` with the changelog entry as its notes.
+For a new major version, also change the default image tag (`1`) in `docker-compose.yml`,
+`.env.example` and `scripts/install.sh`.
 CI tests it, publishes the image and attests it.
 
 ## Backups
@@ -210,7 +216,9 @@ Tests: `cd backend && go test ./...` and `cd web && npm test && npm run check`.
 - **Not on the internet:** the container listens on `127.0.0.1` only, and the installer warns
   when this machine has a public IP address. Reach it through Tailscale or your own reverse
   proxy with HTTPS.
-- **Locked-down container:** it drops every Linux capability and can't gain new ones.
+- **Locked-down container:** it runs as a normal user (it starts as root only to give the
+  data folder to that user, `backend/app/privileges_linux.go`), drops every Linux capability,
+  can't gain new ones, and its filesystem is read-only apart from its data.
 - **Nobody claims a new install before you:** the first account needs the one-time setup
   code the install prints (`backend/app/setup.go`).
 - **Sign-ins are rate limited,** and the web app sends a Content Security Policy
@@ -219,11 +227,14 @@ Tests: `cd backend && go test ./...` and `cd web && npm test && npm run check`.
   in [CI](.github/workflows/ci.yml), with Actions pinned to commit hashes.
 - **Versioned releases:** installs update to a release, not to every change on `main`, and
   every image has a signed attestation of the commit that built it ([Updating](#updating)).
+- **Security scans** on every pull request and every week: CodeQL, Grype on the
+  dependencies and the released image, dependency review and gitleaks
+  ([security.yml](.github/workflows/security.yml)).
 - **No analytics or tracking.** The data stays in `pb_data` on your machine; export all of it
   as CSV from Settings.
 
-Found a security problem? Please write to kalfasyan@pm.me rather than opening an issue
-([security policy](https://github.com/selfhostit/.github/blob/main/SECURITY.md)). [Security and privacy](https://github.com/selfhostit/docs/blob/main/security.md) covers every selfhostit app:
+Found a security problem? Please report it privately, not in an issue: see [SECURITY.md](SECURITY.md)
+for how, and how quickly it gets fixed. [Security and privacy](https://github.com/selfhostit/docs/blob/main/security.md) covers every selfhostit app:
 what protects an install, what you are trusting and what is not done yet.
 
 ## Contributing

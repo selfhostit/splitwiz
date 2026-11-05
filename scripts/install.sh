@@ -14,7 +14,6 @@
 # variables if set: SPLITWIZ_DIR, TZ, SPLITWIZ_LISTEN, SPLITWIZ_PORT.
 set -e
 
-REPO_RAW=https://raw.githubusercontent.com/selfhostit/splitwiz/main
 IMAGE=ghcr.io/selfhostit/splitwiz
 
 # set when run as scripts/install.sh from a clone rather than through a pipe
@@ -180,7 +179,20 @@ mkdir -p "$SPLITWIZ_DATA" 2> /dev/null || true
 
 # --- Start ------------------------------------------------------------------
 
-# Use the compose file from this checkout when run from one, else download it.
+# latest_release: the tag of the newest release, like v1.2.0 (empty if there is none)
+latest_release() {
+	url=https://github.com/selfhostit/splitwiz/releases/latest
+	if command -v curl > /dev/null 2>&1; then curl -fsSI "$url"; else wget -S --spider "$url" 2>&1; fi |
+		sed -n 's|.*[Ll]ocation: .*/releases/tag/\([^[:space:]]*\).*|\1|p' | tr -d '\r' | head -n 1
+}
+
+# Use the compose file from this checkout when run from one, else download the one
+# of the newest release (not whatever is on main), or of SPLITWIZ_REF, a tag or branch.
+if [ -z "$CHECKOUT" ]; then
+	ref=${SPLITWIZ_REF:-$(latest_release || true)}
+	REPO_RAW=https://raw.githubusercontent.com/selfhostit/splitwiz/${ref:-main}
+	say "Using the compose file of Splitwiz ${ref:-main}."
+fi
 if [ -n "$CHECKOUT" ]; then
 	[ "$CHECKOUT" -ef . ] || cp "$CHECKOUT/docker-compose.yml" docker-compose.yml
 elif command -v curl > /dev/null 2>&1; then
@@ -197,15 +209,17 @@ if [ -n "$COMPOSE" ]; then
 else
 	# no Compose on this machine: the same container with plain docker run
 	say "(Docker Compose not found, using docker run instead.)"
-	$DOCKER pull "$IMAGE:${SPLITWIZ_VERSION:-latest}" ||
+	$DOCKER pull "$IMAGE:${SPLITWIZ_VERSION:-1}" ||
 		say "Could not download the latest image; using the one already on this machine."
 	$DOCKER rm -f splitwiz > /dev/null 2>&1 || true
 	case $SPLITWIZ_DATA in /*) data=$SPLITWIZ_DATA ;; *) data=$PWD/${SPLITWIZ_DATA#./} ;; esac
 	$DOCKER run -d --name splitwiz --restart always --memory 256m \
-		--security-opt no-new-privileges:true --cap-drop ALL --cap-add DAC_OVERRIDE --cap-add FOWNER \
+		--security-opt no-new-privileges:true --cap-drop ALL --read-only --tmpfs /tmp \
+		--cap-add CHOWN --cap-add DAC_OVERRIDE --cap-add SETGID --cap-add SETUID \
 		-p "$SPLITWIZ_LISTEN:$SPLITWIZ_PORT:8090" -v "$data:/app/pb_data" \
 		-e "TZ=$TZ" -e "SPLITWIZ_PUSH_CONTACT=${SPLITWIZ_PUSH_CONTACT:-}" \
-		"$IMAGE:${SPLITWIZ_VERSION:-latest}" > /dev/null
+		-e "PUID=${PUID:-1000}" -e "PGID=${PGID:-1000}" \
+		"$IMAGE:${SPLITWIZ_VERSION:-1}" > /dev/null
 fi
 
 i=0
