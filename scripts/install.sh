@@ -6,14 +6,14 @@
 #   curl -fsSL https://raw.githubusercontent.com/selfhostit/splitwiz/main/scripts/install.sh | sh
 #
 # It asks a few questions (Enter keeps the default), writes docker-compose.yml
-# and .env into the install folder, and starts Splitwiz. Run it again to
-# update; your answers in .env are kept.
+# and .env into the install folder, and starts Splitwiz. It suggests port 8090,
+# or the next free one when another app has it. Run it again to update; your
+# answers in .env, the port too, are kept.
 #
 # Without a terminal, or with SPLITWIZ_YES=1, it uses the defaults and these
 # variables if set: SPLITWIZ_DIR, TZ, SPLITWIZ_LISTEN, SPLITWIZ_PORT.
 set -e
 
-REPO_RAW=https://raw.githubusercontent.com/selfhostit/splitwiz/main
 IMAGE=ghcr.io/selfhostit/splitwiz
 
 # set when run as scripts/install.sh from a clone rather than through a pipe
@@ -65,6 +65,28 @@ elif command -v docker-compose > /dev/null 2>&1; then
 else
 	COMPOSE=
 fi
+
+# taken_ports: the TCP ports that something on this machine listens on, and the
+# ones Docker containers publish (stopped ones too, so they can start again)
+taken_ports() {
+	{ ss -ltn 2>/dev/null || netstat -an 2>/dev/null | awk '/^tcp/ && /LISTEN/'; } |
+		awk '{print $4}' | sed -n 's/.*[:.]\([0-9][0-9]*\)$/\1/p'
+	ids=$($DOCKER ps -aq 2>/dev/null) || ids=
+	# shellcheck disable=SC2086 # one argument per container
+	[ -z "$ids" ] || $DOCKER inspect --format \
+		'{{range .HostConfig.PortBindings}}{{range .}}{{.HostPort}} {{end}}{{end}}' $ids 2>/dev/null |
+		tr ' ' '\n'
+}
+
+# free_port PORT: PORT if nothing uses it, else the first free port after it
+free_port() {
+	taken=" $(taken_ports | tr '\n' ' ') "
+	p=$1
+	while :; do
+		case $taken in *" $p "*) p=$((p + 1)) ;; *) break ;; esac
+	done
+	echo "$p"
+}
 
 # public_ip: prints this machine's first public IPv4 address, if it has one,
 # as a VPS or cloud server does. Home networks use private ones (10.x, 192.168.x,
@@ -136,7 +158,12 @@ else
 		say "Keeping it to this machine only."
 		SPLITWIZ_LISTEN=127.0.0.1
 	fi
-	SPLITWIZ_PORT=$(ask "Port" "${SPLITWIZ_PORT:-8090}")
+	# Apps on one machine each need a port of their own: suggest 8090 (or
+	# SPLITWIZ_PORT), or the next free one when something has it.
+	want=${SPLITWIZ_PORT:-8090}
+	port=$(free_port "$want")
+	[ "$port" = "$want" ] || say "Port $want is taken, so Splitwiz gets port $port."
+	SPLITWIZ_PORT=$(ask "Port" "$port")
 
 	cat > .env <<-EOF
 		# Splitwiz settings; see https://github.com/selfhostit/splitwiz/blob/main/.env.example
@@ -152,7 +179,20 @@ mkdir -p "$SPLITWIZ_DATA" 2> /dev/null || true
 
 # --- Start ------------------------------------------------------------------
 
-# Use the compose file from this checkout when run from one, else download it.
+# latest_release: the tag of the newest release, like v1.2.0 (empty if there is none)
+latest_release() {
+	url=https://github.com/selfhostit/splitwiz/releases/latest
+	if command -v curl > /dev/null 2>&1; then curl -fsSI "$url"; else wget -S --spider "$url" 2>&1; fi |
+		sed -n 's|.*[Ll]ocation: .*/releases/tag/\([^[:space:]]*\).*|\1|p' | tr -d '\r' | head -n 1
+}
+
+# Use the compose file from this checkout when run from one, else download the one
+# of the newest release (not whatever is on main), or of SPLITWIZ_REF, a tag or branch.
+if [ -z "$CHECKOUT" ]; then
+	ref=${SPLITWIZ_REF:-$(latest_release || true)}
+	REPO_RAW=https://raw.githubusercontent.com/selfhostit/splitwiz/${ref:-main}
+	say "Using the compose file of Splitwiz ${ref:-main}."
+fi
 if [ -n "$CHECKOUT" ]; then
 	[ "$CHECKOUT" -ef . ] || cp "$CHECKOUT/docker-compose.yml" docker-compose.yml
 elif command -v curl > /dev/null 2>&1; then
@@ -169,15 +209,17 @@ if [ -n "$COMPOSE" ]; then
 else
 	# no Compose on this machine: the same container with plain docker run
 	say "(Docker Compose not found, using docker run instead.)"
-	$DOCKER pull "$IMAGE:${SPLITWIZ_VERSION:-latest}" ||
+	$DOCKER pull "$IMAGE:${SPLITWIZ_VERSION:-1}" ||
 		say "Could not download the latest image; using the one already on this machine."
 	$DOCKER rm -f splitwiz > /dev/null 2>&1 || true
 	case $SPLITWIZ_DATA in /*) data=$SPLITWIZ_DATA ;; *) data=$PWD/${SPLITWIZ_DATA#./} ;; esac
 	$DOCKER run -d --name splitwiz --restart always --memory 256m \
-		--security-opt no-new-privileges:true --cap-drop ALL --cap-add DAC_OVERRIDE --cap-add FOWNER \
+		--security-opt no-new-privileges:true --cap-drop ALL --read-only --tmpfs /tmp \
+		--cap-add CHOWN --cap-add DAC_OVERRIDE --cap-add SETGID --cap-add SETUID \
 		-p "$SPLITWIZ_LISTEN:$SPLITWIZ_PORT:8090" -v "$data:/app/pb_data" \
 		-e "TZ=$TZ" -e "SPLITWIZ_PUSH_CONTACT=${SPLITWIZ_PUSH_CONTACT:-}" \
-		"$IMAGE:${SPLITWIZ_VERSION:-latest}" > /dev/null
+		-e "PUID=${PUID:-1000}" -e "PGID=${PGID:-1000}" \
+		"$IMAGE:${SPLITWIZ_VERSION:-1}" > /dev/null
 fi
 
 i=0

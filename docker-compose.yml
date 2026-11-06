@@ -9,7 +9,7 @@
 # QNAP Container Station, Portainer, ...). See docs/synology.md.
 services:
   splitwiz:
-    image: ghcr.io/selfhostit/splitwiz:${SPLITWIZ_VERSION:-latest}
+    image: ghcr.io/selfhostit/splitwiz:${SPLITWIZ_VERSION:-1}
     container_name: splitwiz
     restart: always
     ports:
@@ -21,9 +21,14 @@ services:
     environment:
       - TZ=${TZ:-UTC} # your time zone, e.g. Europe/Brussels: when repeating expenses and backups run
       - SPLITWIZ_PUSH_CONTACT=${SPLITWIZ_PUSH_CONTACT:-} # optional mailto: or https: address for push services
-    # Runs as root inside the container, but with no extra privileges except
-    # writing to a data folder that belongs to another user.
+      - PUID=${PUID:-1000} # the user (and group) Splitwiz runs as, who owns the data folder
+      - PGID=${PGID:-1000}
+    # Splitwiz starts as root only to give the data folder to PUID:PGID, then runs as that
+    # user; switching drops these capabilities again. It can't gain new privileges, and
+    # nothing in the container can be changed apart from the data folder and /tmp.
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
-    cap_add: [DAC_OVERRIDE, FOWNER]
+    cap_add: [CHOWN, DAC_OVERRIDE, SETGID, SETUID]
+    read_only: true
+    tmpfs: [/tmp]
     mem_limit: 256m

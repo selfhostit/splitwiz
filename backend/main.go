@@ -37,6 +37,9 @@ func main() {
 		return se.Next()
 	})
 
+	// as a normal user, before anything opens the database
+	app.DropRoot(pb.DataDir())
+
 	if err := pb.Start(); err != nil {
 		log.Fatal(err)
 	}

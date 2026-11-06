@@ -75,6 +75,18 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build the image for the smoke test
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          load: true
+          tags: ghcr.io/selfhostit/splitwiz:smoke
+          cache-from: type=gha
+      # docker-compose.yml with that image: runs as a normal user on a read-only filesystem
+      - name: Smoke test
+        run: scripts/smoke-test.sh
+        env:
+          SPLITWIZ_VERSION: smoke
       - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         id: push
         with:
