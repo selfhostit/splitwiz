@@ -32,10 +32,13 @@ func main() {
 	// serve the PWA, falling back to index.html for client-side routes
 	pb.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		if !se.Router.HasRoute(http.MethodGet, "/{path...}") {
-			se.Router.GET("/{path...}", apis.Static(os.DirFS(publicDir), true))
+			se.Router.GET("/{path...}", apis.Static(os.DirFS(publicDir), true)).BindFunc(app.SecureHeaders)
 		}
 		return se.Next()
 	})
+
+	// as a normal user, before anything opens the database
+	app.DropRoot(pb.DataDir())
 
 	if err := pb.Start(); err != nil {
 		log.Fatal(err)

@@ -6,14 +6,14 @@
 #   curl -fsSL https://raw.githubusercontent.com/selfhostit/splitwiz/main/scripts/install.sh | sh
 #
 # It asks a few questions (Enter keeps the default), writes docker-compose.yml
-# and .env into the install folder, and starts Splitwiz. Run it again to
-# update; your answers in .env are kept.
+# and .env into the install folder, and starts Splitwiz. It suggests port 8090,
+# or the next free one when another app has it. Run it again to update; your
+# answers in .env, the port too, are kept.
 #
 # Without a terminal, or with SPLITWIZ_YES=1, it uses the defaults and these
 # variables if set: SPLITWIZ_DIR, TZ, SPLITWIZ_LISTEN, SPLITWIZ_PORT.
 set -e
 
-REPO_RAW=https://raw.githubusercontent.com/selfhostit/splitwiz/main
 IMAGE=ghcr.io/selfhostit/splitwiz
 
 # set when run as scripts/install.sh from a clone rather than through a pipe
@@ -66,6 +66,44 @@ else
 	COMPOSE=
 fi
 
+# taken_ports: the TCP ports that something on this machine listens on, and the
+# ones Docker containers publish (stopped ones too, so they can start again)
+taken_ports() {
+	{ ss -ltn 2>/dev/null || netstat -an 2>/dev/null | awk '/^tcp/ && /LISTEN/'; } |
+		awk '{print $4}' | sed -n 's/.*[:.]\([0-9][0-9]*\)$/\1/p'
+	ids=$($DOCKER ps -aq 2>/dev/null) || ids=
+	# shellcheck disable=SC2086 # one argument per container
+	[ -z "$ids" ] || $DOCKER inspect --format \
+		'{{range .HostConfig.PortBindings}}{{range .}}{{.HostPort}} {{end}}{{end}}' $ids 2>/dev/null |
+		tr ' ' '\n'
+}
+
+# free_port PORT: PORT if nothing uses it, else the first free port after it
+free_port() {
+	taken=" $(taken_ports | tr '\n' ' ') "
+	p=$1
+	while :; do
+		case $taken in *" $p "*) p=$((p + 1)) ;; *) break ;; esac
+	done
+	echo "$p"
+}
+
+# public_ip: prints this machine's first public IPv4 address, if it has one,
+# as a VPS or cloud server does. Home networks use private ones (10.x, 192.168.x,
+# 172.16-31.x), and Tailscale and carrier-grade NAT use 100.64-127.x.
+public_ip() {
+	{ hostname -I 2> /dev/null || ip -4 -o addr show scope global 2> /dev/null | awk '{sub("/.*", "", $4); print $4}'; } |
+		tr ' ' '\n' | while read -r a; do
+		case $a in
+			'' | *:* | 10.* | 127.* | 192.168.* | 169.254.*) ;;
+			172.1[6-9].* | 172.2[0-9].* | 172.3[01].*) ;;
+			100.6[4-9].* | 100.[7-9][0-9].* | 100.1[01][0-9].* | 100.12[0-7].*) ;;
+			*) echo "$a" && break ;;
+		esac
+	done
+}
+PUBLIC_IP=$(public_ip)
+
 # --- Questions --------------------------------------------------------------
 
 if [ -n "$SPLITWIZ_DIR" ]; then
@@ -102,14 +140,30 @@ else
 	say "Who should be able to connect?"
 	say "  1) Only this machine. Pick this if you will put a reverse proxy with HTTPS in front"
 	say "     (the NAS's own reverse proxy, Caddy, Nginx Proxy Manager, Traefik, a tunnel)."
-	say "  2) Every device on your network, over plain http://. Easiest to try out, but phones"
+	say "  2) Every device on your home network, over plain http://. Easiest to try out, but phones"
 	say "     need HTTPS to install the app and get notifications."
+	if [ -n "$PUBLIC_IP" ]; then
+		say ""
+		say "This machine has a public address ($PUBLIC_IP), like a VPS or cloud server. Here option 2"
+		say "puts Splitwiz on the internet over plain http://, and Docker opens the port even if a"
+		say "firewall such as ufw blocks it. Pick 1 and use Tailscale or a reverse proxy with HTTPS."
+	fi
 	case ${SPLITWIZ_LISTEN:-127.0.0.1} in 0.0.0.0) d=2 ;; *) d=1 ;; esac
 	case $(ask "Choose 1 or 2" "$d") in
 		2) SPLITWIZ_LISTEN=0.0.0.0 ;;
 		*) SPLITWIZ_LISTEN=127.0.0.1 ;;
 	esac
-	SPLITWIZ_PORT=$(ask "Port" "${SPLITWIZ_PORT:-8090}")
+	if [ "$SPLITWIZ_LISTEN" = 0.0.0.0 ] && [ -n "$PUBLIC_IP" ] &&
+		[ "$(ask "Type yes to really open Splitwiz to the internet" no)" != yes ]; then
+		say "Keeping it to this machine only."
+		SPLITWIZ_LISTEN=127.0.0.1
+	fi
+	# Apps on one machine each need a port of their own: suggest 8090 (or
+	# SPLITWIZ_PORT), or the next free one when something has it.
+	want=${SPLITWIZ_PORT:-8090}
+	port=$(free_port "$want")
+	[ "$port" = "$want" ] || say "Port $want is taken, so Splitwiz gets port $port."
+	SPLITWIZ_PORT=$(ask "Port" "$port")
 
 	cat > .env <<-EOF
 		# Splitwiz settings; see https://github.com/selfhostit/splitwiz/blob/main/.env.example
@@ -125,7 +179,20 @@ mkdir -p "$SPLITWIZ_DATA" 2> /dev/null || true
 
 # --- Start ------------------------------------------------------------------
 
-# Use the compose file from this checkout when run from one, else download it.
+# latest_release: the tag of the newest release, like v1.2.0 (empty if there is none)
+latest_release() {
+	url=https://github.com/selfhostit/splitwiz/releases/latest
+	if command -v curl > /dev/null 2>&1; then curl -fsSI "$url"; else wget -S --spider "$url" 2>&1; fi |
+		sed -n 's|.*[Ll]ocation: .*/releases/tag/\([^[:space:]]*\).*|\1|p' | tr -d '\r' | head -n 1
+}
+
+# Use the compose file from this checkout when run from one, else download the one
+# of the newest release (not whatever is on main), or of SPLITWIZ_REF, a tag or branch.
+if [ -z "$CHECKOUT" ]; then
+	ref=${SPLITWIZ_REF:-$(latest_release || true)}
+	REPO_RAW=https://raw.githubusercontent.com/selfhostit/splitwiz/${ref:-main}
+	say "Using the compose file of Splitwiz ${ref:-main}."
+fi
 if [ -n "$CHECKOUT" ]; then
 	[ "$CHECKOUT" -ef . ] || cp "$CHECKOUT/docker-compose.yml" docker-compose.yml
 elif command -v curl > /dev/null 2>&1; then
@@ -142,14 +209,17 @@ if [ -n "$COMPOSE" ]; then
 else
 	# no Compose on this machine: the same container with plain docker run
 	say "(Docker Compose not found, using docker run instead.)"
-	$DOCKER pull "$IMAGE:${SPLITWIZ_VERSION:-latest}" ||
+	$DOCKER pull "$IMAGE:${SPLITWIZ_VERSION:-1}" ||
 		say "Could not download the latest image; using the one already on this machine."
 	$DOCKER rm -f splitwiz > /dev/null 2>&1 || true
 	case $SPLITWIZ_DATA in /*) data=$SPLITWIZ_DATA ;; *) data=$PWD/${SPLITWIZ_DATA#./} ;; esac
 	$DOCKER run -d --name splitwiz --restart always --memory 256m \
+		--security-opt no-new-privileges:true --cap-drop ALL --read-only --tmpfs /tmp \
+		--cap-add CHOWN --cap-add DAC_OVERRIDE --cap-add SETGID --cap-add SETUID \
 		-p "$SPLITWIZ_LISTEN:$SPLITWIZ_PORT:8090" -v "$data:/app/pb_data" \
 		-e "TZ=$TZ" -e "SPLITWIZ_PUSH_CONTACT=${SPLITWIZ_PUSH_CONTACT:-}" \
-		"$IMAGE:${SPLITWIZ_VERSION:-latest}" > /dev/null
+		-e "PUID=${PUID:-1000}" -e "PGID=${PGID:-1000}" \
+		"$IMAGE:${SPLITWIZ_VERSION:-1}" > /dev/null
 fi
 
 i=0
@@ -165,6 +235,12 @@ lan_ip=$(hostname -I 2> /dev/null | awk '{print $1}')
 [ -z "$lan_ip" ] && lan_ip=$(ip route get 1.1.1.1 2> /dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p')
 [ -z "$lan_ip" ] && lan_ip="<this-machine's-address>"
 
+if [ "$SPLITWIZ_LISTEN" = 0.0.0.0 ] && [ -n "$PUBLIC_IP" ]; then
+	say ""
+	say "Warning: Splitwiz listens on every address of this machine, which has a public one"
+	say "($PUBLIC_IP), so anyone on the internet can reach it over plain http://, firewall or not."
+	say "Set SPLITWIZ_LISTEN=127.0.0.1 in $DIR/.env and run this installer again to close it."
+fi
 say ""
 say "Splitwiz is running, with its data in $DIR."
 say ""
