@@ -1,6 +1,21 @@
 version: 2
 updates:
+  # Go and web dependencies, grouped into one PR each a week
+  - package-ecosystem: gomod
+    directory: /backend
+    schedule: { interval: weekly }
+    groups:
+      go: { patterns: ['*'] }
+  - package-ecosystem: npm
+    directory: /web
+    schedule: { interval: weekly }
+    groups:
+      web: { patterns: ['*'] }
   # keeps the commit-pinned Actions in the workflows current
   - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }
+  # the base images in the Dockerfile
+  - package-ecosystem: docker
     directory: /
     schedule: { interval: monthly }
