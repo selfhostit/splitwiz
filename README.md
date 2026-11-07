@@ -11,6 +11,7 @@
 A small, self-hosted alternative to Splitwise for two people. No ads, no daily limits, no account on someone else's cloud. One Docker container, installable on your phone like a native app.
 
 [![CI](https://github.com/selfhostit/splitwiz/actions/workflows/ci.yml/badge.svg)](https://github.com/selfhostit/splitwiz/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/selfhostit/splitwiz/badge)](https://scorecard.dev/viewer/?uri=github.com/selfhostit/splitwiz)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Docker image](https://img.shields.io/badge/docker-ghcr.io%2Fselfhostit%2Fsplitwiz-blue?logo=docker&logoColor=white)](https://github.com/selfhostit/splitwiz/pkgs/container/splitwiz)
 [![Buy me a coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/kalfasyan)
@@ -162,6 +163,9 @@ the [GitHub CLI](https://cli.github.com):
 ```sh
 gh attestation verify oci://ghcr.io/selfhostit/splitwiz:latest --repo selfhostit/splitwiz
 ```
+
+It also carries a software bill of materials (SBOM), the list of every package inside it:
+`docker buildx imagetools inspect ghcr.io/selfhostit/splitwiz:latest --format '{{ json .SBOM }}'`.
 
 To release: add the changes under a new version in `CHANGELOG.md` and `web/package.json`,
 merge, then publish a GitHub release tagged `vX.Y.Z` with the changelog entry as its notes.

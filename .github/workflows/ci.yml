@@ -93,6 +93,8 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: ${{ github.event_name == 'push' }}
+          # a software bill of materials (SPDX), attached to the image on ghcr.io
+          sbom: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha

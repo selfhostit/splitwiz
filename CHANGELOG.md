@@ -5,6 +5,9 @@ What changed in each release of Splitwiz. Installs update to the newest release;
 
 ## Unreleased
 
+- Every published image carries a software bill of materials (SBOM), and an OpenSSF
+  Scorecard run checks the repository's security practices every week. Dependabot now
+  also keeps the Go, npm and Docker dependencies up to date.
 - golang.org/x/net 0.62.0, which fixes GO-2026-6860, with the golang.org/x modules it needs.
 - Runs as a normal user (1000:1000, or `PUID`/`PGID`): it starts as root only to give the
   data folder to that user, then switches. An install that keeps an older compose file keeps
