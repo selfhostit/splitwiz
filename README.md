@@ -71,10 +71,12 @@ Otherwise you need Docker. Pick whichever fits your machine; both end at the sam
 **With a terminal** (Linux server, VPS, Raspberry Pi, or a NAS with SSH):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/selfhostit/splitwiz/main/scripts/install.sh | sh
+curl -fsSL https://github.com/selfhostit/docs/releases/latest/download/install.sh | sh -s -- splitwiz
 ```
 
-It asks for an install folder, your time zone and who may connect (Enter keeps each default), then starts Splitwiz and prints the address to open.
+This is the installer for every selfhostit app, set to install only Splitwiz; Splitwiz needs no other app. It sets up Docker if it is missing, installs a pinned release of Splitwiz and checks every file against its SHA-256, asks for an install folder, your time zone and who may connect (Enter keeps each default), and can give Splitwiz an `https://` address with Tailscale so it installs on both your phones. Then it prints the address and setup code to open. Step by step: [a Pi or Linux](https://github.com/selfhostit/docs/blob/main/linux.md), [a Synology](https://github.com/selfhostit/docs/blob/main/synology.md) or [another NAS](https://github.com/selfhostit/docs/blob/main/other-nas.md).
+
+Splitwiz's own installer asks the same questions, without the SHA-256 checks or the Tailscale step: `curl -fsSL https://raw.githubusercontent.com/selfhostit/splitwiz/main/scripts/install.sh | sh`.
 
 **Without a terminal** (a NAS's Docker app, Portainer, or any Compose tool): use [`docker-compose.yml`](docker-compose.yml) as it is, or with a `.env` next to it (see [`.env.example`](.env.example)). From a shell that is:
 
