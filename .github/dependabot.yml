@@ -18,4 +18,6 @@ updates:
   # the base images in the Dockerfile
   - package-ecosystem: docker
     directory: /
-    schedule: { interval: monthly }
+    schedule: { interval: weekly }
+    groups:
+      docker: { patterns: ['*'] }
