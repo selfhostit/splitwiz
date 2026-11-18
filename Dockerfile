@@ -22,8 +22,10 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOARM=${TARGETVARIANT#v} \
     go build -trimpath -ldflags="-s -w" -o /splitwiz .
 
 # --- runtime ---
-FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
-RUN apk add --no-cache ca-certificates tzdata
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS runtime
+# Take Alpine's security fixes now rather than waiting for the base image to be rebuilt.
+RUN apk upgrade --no-cache \
+    && apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 COPY --from=backend /splitwiz /app/splitwiz
 COPY --from=web /web/dist /app/pb_public
