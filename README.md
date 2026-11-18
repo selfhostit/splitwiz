@@ -11,8 +11,10 @@
 A small, self-hosted alternative to Splitwise for two people. No ads, no daily limits, no account on someone else's cloud. One Docker container, installable on your phone like a native app.
 
 [![CI](https://github.com/selfhostit/splitwiz/actions/workflows/ci.yml/badge.svg)](https://github.com/selfhostit/splitwiz/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/selfhostit/splitwiz)](https://github.com/selfhostit/splitwiz/releases/latest)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/selfhostit/splitwiz/badge)](https://scorecard.dev/viewer/?uri=github.com/selfhostit/splitwiz)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Image](https://img.shields.io/badge/image-ghcr.io%2Fselfhostit%2Fsplitwiz-2496ED?logo=docker&logoColor=white)](https://github.com/orgs/selfhostit/packages/container/package/splitwiz)
 [![Docker image](https://img.shields.io/badge/docker-ghcr.io%2Fselfhostit%2Fsplitwiz-blue?logo=docker&logoColor=white)](https://github.com/selfhostit/splitwiz/pkgs/container/splitwiz)
 [![Buy me a coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/kalfasyan)
 
