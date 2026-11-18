@@ -98,6 +98,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
+          # Run the runtime stage fresh, so each release takes Alpine's latest security fixes.
+          no-cache-filters: runtime
           cache-to: type=gha,mode=max
       # A signed statement of which workflow and commit built the image; check it with
       # `gh attestation verify oci://<image>:<tag> --repo <owner>/<repo>`.
